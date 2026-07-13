@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Static Analysis — Phân Tích Tĩnh Ứng Dụng Di Động</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14181C;
+    --ink-soft:#1D2329;
+    --ink-soft-2:#242C33;
+    --ink-line:#323C44;
+    --paper:#EDE6D6;
+    --paper-2:#E4DAC2;
+    --paper-line:#B9AD90;
+    --amber:#E8A33D;
+    --amber-dim:#B9791F;
+    --teal:#5B9C8D;
+    --teal-dim:#3E6E63;
+    --sev-critical:#C0392B;
+    --sev-high:#D97B3D;
+    --sev-medium:#B8912A;
+    --sev-low:#5B7480;
+    --sev-info:#5A7378;
+    --text-on-ink:#EDE6D6;
+    --text-on-ink-dim:#A9A192;
+    --text-on-paper:#1D2329;
+    --text-on-paper-dim:#5B5747;
+    --font-display:'Big Shoulders Display', sans-serif;
+    --font-body:'IBM Plex Sans', -apple-system, sans-serif;
+    --font-mono:'IBM Plex Mono', 'Courier New', monospace;
+    --radius:10px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--text-on-ink);
+    font-family:var(--font-body);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{ margin:0 0 .5em 0; font-weight:700; }
+  p{ margin:0 0 1em 0; }
+  ul{ margin:0; padding:0; }
+  button{ font-family:inherit; cursor:pointer; }
+  a{ color:var(--amber); }
+  .kw{ font-family:var(--font-mono); font-size:.92em; background:rgba(232,163,61,.14); color:var(--amber); padding:.08em .4em; border-radius:4px; }
+  .kw-dark{ font-family:var(--font-mono); font-size:.9em; background:rgba(29,35,41,.08); color:var(--teal-dim); padding:.08em .4em; border-radius:4px; }
+  :focus-visible{ outline:3px solid var(--amber); outline-offset:2px; }
+
+  /* ---------- Layout shell ---------- */
+  .app-shell{ display:flex; min-height:100vh; }
+  .sidebar{
+    width:272px; flex-shrink:0; background:var(--ink-soft);
+    border-right:1px solid var(--ink-line); padding:28px 18px;
+    position:sticky; top:0; height:100vh; overflow-y:auto;
+  }
+  .brand-eyebrow{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.18em;
+    color:var(--amber); text-transform:uppercase;
+  }
+  .brand-title{
+    font-family:var(--font-display); font-weight:900; font-size:40px;
+    line-height:.92; letter-spacing:.01em; margin:6px 0 10px 0; color:var(--paper);
+  }
+  .brand-sub{ font-size:13.5px; color:var(--text-on-ink-dim); margin-bottom:22px; }
+  .tab-list{ list-style:none; display:flex; flex-direction:column; gap:4px; }
+  .tab-btn{
+    display:flex; align-items:baseline; gap:10px; width:100%; text-align:left;
+    background:transparent; border:none; border-left:3px solid transparent;
+    color:var(--text-on-ink-dim); padding:9px 10px; border-radius:0 6px 6px 0;
+    transition:background .15s, color .15s, border-color .15s;
+  }
+  .tab-btn:hover{ background:var(--ink-soft-2); color:var(--paper); }
+  .tab-btn.active{ background:var(--ink-soft-2); border-left-color:var(--amber); color:var(--paper); }
+  .tab-num{ font-family:var(--font-mono); font-size:12px; color:var(--amber); flex-shrink:0; }
+  .tab-label{ display:flex; flex-direction:column; font-size:14px; font-weight:600; }
+  .tab-label em{ font-style:normal; font-family:var(--font-mono); font-size:10.5px; font-weight:400; color:var(--text-on-ink-dim); letter-spacing:.03em; }
+  .tab-btn.active .tab-label em{ color:var(--amber-dim); }
+
+  .main{ flex:1; min-width:0; padding:40px 44px 80px; max-height:100vh; overflow-y:auto; }
+  .tab-panel{ display:none; max-width:920px; margin:0 auto; animation:fadein .3s ease; }
+  .tab-panel.active{ display:block; }
+  @keyframes fadein{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
+
+  .eyebrow{ font-family:var(--font-mono); font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--amber); margin-bottom:8px; }
+  .h-display{ font-family:var(--font-display); font-weight:900; font-size:38px; letter-spacing:.005em; color:var(--paper); line-height:1.05; }
+  .lede{ font-size:16px; color:var(--text-on-ink-dim); max-width:64ch; margin-top:10px; }
+
+  /* ---------- Paper panel / card ---------- */
+  .panel{
+    background:var(--paper); color:var(--text-on-paper); border-radius:var(--radius);
+    padding:26px 28px; margin-top:26px; position:relative;
+    box-shadow:0 18px 34px -18px rgba(0,0,0,.55);
+  }
+  .panel + .panel{ margin-top:20px; }
+  .panel-clip{
+    position:absolute; top:-11px; left:26px; width:26px; height:22px;
+    border:3px solid var(--ink-line); border-bottom:none; border-radius:6px 6px 0 0;
+    background:var(--ink-soft);
+  }
+  .panel h3{ font-size:19px; color:var(--text-on-paper); }
+  .panel .sub{ font-size:13px; color:var(--text-on-paper-dim); margin-top:-6px; margin-bottom:14px; }
+  .panel p{ color:var(--text-on-paper); }
+  .panel-dark{
+    background:var(--ink-soft); color:var(--text-on-ink); border:1px solid var(--ink-line);
+  }
+  .panel-dark p, .panel-dark li{ color:var(--text-on-ink-dim); }
+
+  /* ---------- badges ---------- */
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; font-family:var(--font-mono);
+    font-size:11px; font-weight:600; letter-spacing:.04em; text-transform:uppercase;
+    padding:3px 9px; border-radius:999px; color:#fff;
+  }
+  .badge-critical{ background:var(--sev-critical); }
+  .badge-high{ background:var(--sev-high); }
+  .badge-medium{ background:var(--sev-medium); color:#221a04;}
+  .badge-low{ background:var(--sev-low); }
+  .badge-info{ background:var(--sev-info); }
+  .sev-legend{ display:flex; flex-wrap:wrap; gap:8px 14px; font-size:12.5px; color:var(--text-on-ink-dim); margin:14px 0 4px; }
+  .sev-legend span{ display:inline-flex; align-items:center; gap:6px; }
+
+  /* ---------- mono / terminal blocks ---------- */
+  .mono-block{
+    font-family:var(--font-mono); background:var(--ink); color:var(--paper);
+    border-radius:8px; padding:14px 16px; font-size:13px; overflow-x:auto;
+    white-space:pre-wrap; line-height:1.55; border:1px solid var(--ink-line);
+  }
+  .term{ background:#0F1215; border-radius:8px; overflow:hidden; border:1px solid var(--ink-line); margin-top:14px; }
+  .term-bar{ display:flex; gap:6px; padding:9px 12px; background:#191D21; border-bottom:1px solid var(--ink-line); }
+  .term-dot{ width:9px; height:9px; border-radius:50%; background:#454e56; }
+  .term pre{ margin:0; padding:16px; font-family:var(--font-mono); font-size:12.8px; color:#CFEAE0; white-space:pre-wrap; min-height:1.6em; }
+  .term .cursor{ display:inline-block; width:7px; height:14px; background:var(--amber); vertical-align:-2px; animation:blink 1s step-end infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  /* ---------- buttons ---------- */
+  .btn{
+    display:inline-flex; align-items:center; gap:8px; background:var(--amber); color:#221a04;
+    border:none; padding:10px 18px; border-radius:7px; font-weight:700; font-size:14px;
+    transition:transform .12s, background .12s;
+  }
+  .btn:hover{ background:#f2b256; transform:translateY(-1px); }
+  .btn-ghost{
+    background:transparent; border:1.5px solid var(--ink-line); color:var(--text-on-ink);
+    padding:9px 16px; border-radius:7px; font-weight:600; font-size:13.5px;
+  }
+  .btn-ghost:hover{ border-color:var(--amber); color:var(--amber); }
+  .btn-ghost.on-paper{ border-color:var(--paper-line); color:var(--text-on-paper); }
+  .btn-ghost.on-paper:hover{ border-color:var(--amber-dim); color:var(--amber-dim); }
+  .btn-row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+
+  .toggle-row{ display:inline-flex; background:var(--ink-soft); border:1px solid var(--ink-line); border-radius:8px; padding:3px; gap:2px; }
+  .toggle-btn{ background:transparent; border:none; color:var(--text-on-ink-dim); padding:8px 16px; border-radius:6px; font-weight:600; font-size:13.5px; }
+  .toggle-btn.active{ background:var(--amber); color:#221a04; }
+
+  /* ---------- Tab 0 hero ---------- */
+  .compare-grid{ display:grid; grid-template-columns:1fr; gap:16px; }
+  .mode-panel{ display:none; }
+  .mode-panel.active{ display:block; }
+  .fact-row{ display:grid; grid-template-columns:120px 1fr; gap:4px 14px; margin-top:12px; font-size:14.5px; }
+  .fact-row dt{ font-weight:700; color:var(--text-on-paper); }
+  .fact-row dd{ margin:0 0 8px 0; color:var(--text-on-paper-dim); }
+
+  .hero-interactive{ display:flex; flex-wrap:wrap; align-items:center; gap:34px; margin-top:30px; }
+  .evidence-svg{ width:200px; height:250px; flex-shrink:0; }
+  .pouch-body{ fill:var(--paper); stroke:var(--paper-line); stroke-width:2; }
+  .pouch-seam{ stroke:var(--paper-line); stroke-width:1.5; stroke-dasharray:4 4; }
+  .pouch-title-1{ font-family:var(--font-display); font-weight:800; font-size:19px; fill:var(--ink); }
+  .pouch-title-2{ font-family:var(--font-mono); font-size:11px; fill:var(--text-on-paper-dim); }
+  .barcode rect{ fill:var(--ink); }
+  .pouch-flap{ transform-box:fill-box; transform-origin:50% 100%; transition:transform .55s cubic-bezier(.2,.8,.2,1), opacity .5s; }
+  .pouch-flap-rect{ fill:var(--ink-soft); stroke:var(--amber-dim); stroke-width:1.5; }
+  .pouch-seal{ fill:var(--sev-critical); transition:transform .4s, opacity .4s; transform-box:fill-box; transform-origin:50% 50%; }
+  .seal-text-1{ font-family:var(--font-mono); font-weight:700; font-size:9.5px; fill:#fff; letter-spacing:.02em; transition:opacity .3s; }
+  .seal-text-2{ font-family:var(--font-mono); font-size:7px; fill:#fbdcd5; letter-spacing:.03em; transition:opacity .3s; }
+  .hero-interactive.opened .pouch-flap{ transform:rotate(-22deg) translate(-4px,-16px); opacity:.35; }
+  .evidence-caption{ font-family:var(--font-mono); font-size:11.5px; color:var(--text-on-ink-dim); text-align:center; margin-top:10px; }
+  .hero-copy{ flex:1; min-width:260px; }
+  .evidence-reveal{ max-height:0; opacity:0; overflow:hidden; transition:max-height .5s ease, opacity .4s ease; margin-top:0; }
+  .hero-interactive.opened .evidence-reveal{ max-height:260px; opacity:1; margin-top:16px; }
+  .reveal-list{ list-style:none; display:flex; flex-direction:column; gap:6px; margin:10px 0 16px; }
+  .reveal-list li{ font-family:var(--font-mono); font-size:13px; color:var(--teal); }
+  .reveal-list li::before{ content:"› "; color:var(--amber); }
+
+  .scenario-box{ border-left:3px solid var(--teal); padding-left:16px; margin-top:22px; }
+  .scenario-box .eyebrow{ color:var(--teal); }
+
+  /* ---------- Tab 1 tree ---------- */
+  .tree-layout{ display:flex; gap:20px; flex-wrap:wrap; }
+  .tree-col{ flex:1 1 260px; min-width:230px; }
+  .detail-col{ flex:1.3 1 320px; min-width:280px; }
+  .tree-view{ display:none; }
+  .tree-view.active{ display:block; }
+  .tree-root, .tree-root ul{ list-style:none; margin:0; padding-left:0; }
+  .tree-root ul{ padding-left:18px; border-left:1px dashed var(--paper-line); margin-left:7px; }
+  .tree-root li{ margin:2px 0; }
+  .tree-node{
+    background:transparent; border:none; font-family:var(--font-mono); font-size:13.5px;
+    color:var(--text-on-paper); padding:5px 8px; border-radius:5px; text-align:left; width:100%;
+  }
+  .tree-node:hover{ background:var(--paper-2); }
+  .tree-node.selected{ background:var(--ink); color:var(--amber); font-weight:600; }
+  .tree-detail{ display:none; background:var(--ink-soft); border:1px solid var(--ink-line); border-radius:8px; padding:16px 18px; color:var(--text-on-ink); min-height:180px; }
+  .tree-detail.active{ display:block; }
+  .tree-detail h4{ color:var(--paper); font-size:15.5px; font-family:var(--font-mono); }
+  .tree-detail p{ color:var(--text-on-ink-dim); font-size:13.8px; }
+  .tree-detail .hint{ color:var(--text-on-ink-dim); font-size:14px; }
+  .why-line{ margin-top:10px; padding-top:10px; border-top:1px dashed var(--ink-line); font-size:13.5px; }
+  .why-line strong{ color:var(--teal); }
+
+  /* ---------- Tab 2 workflow ---------- */
+  .steps-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; }
+  .step-btn{
+    background:var(--ink-soft); border:1px solid var(--ink-line); color:var(--text-on-ink-dim);
+    padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; display:flex; gap:8px; align-items:center;
+  }
+  .step-btn .n{ font-family:var(--font-mono); color:var(--amber); }
+  .step-btn.active{ background:var(--amber); color:#221a04; border-color:var(--amber); }
+  .step-btn.active .n{ color:#221a04; }
+  .step-detail{ display:none; }
+  .step-detail.active{ display:block; }
+  .step-note{ font-size:14px; color:var(--text-on-ink-dim); margin-top:14px; }
+
+  /* ---------- Tab 3 manifest ---------- */
+  .manifest-wrap{ display:flex; gap:20px; flex-wrap:wrap; margin-top:16px; }
+  .manifest-code-col{ flex:1.4 1 340px; min-width:280px; }
+  .manifest-detail-col{ flex:1 1 280px; min-width:260px; }
+  pre.manifest-code{ font-family:var(--font-mono); font-size:12.6px; line-height:1.75; background:var(--ink); color:var(--text-on-ink-dim); border-radius:8px; padding:16px; border:1px solid var(--ink-line); overflow-x:auto; }
+  .mline{ cursor:pointer; border-radius:3px; padding:0 2px; margin:0 -2px; }
+  .mline:hover{ background:rgba(232,163,61,.16); color:var(--paper); }
+  .mline.reviewed{ text-decoration:underline dotted var(--teal); text-underline-offset:3px; }
+  .mline.selected{ background:rgba(232,163,61,.28); color:var(--amber); }
+  .progress-line{ font-family:var(--font-mono); font-size:12.5px; color:var(--text-on-ink-dim); margin-top:10px; }
+  .progress-line b{ color:var(--amber); }
+  .m-detail{ display:none; }
+  .m-detail.active{ display:block; }
+
+  /* ---------- Tab 4 secrets ---------- */
+  .secret-console{ background:var(--ink); border:1px solid var(--ink-line); border-radius:8px; padding:6px; margin-top:16px; }
+  .secret-line{
+    font-family:var(--font-mono); font-size:13px; color:var(--text-on-ink-dim);
+    padding:8px 12px; border-radius:6px; display:flex; align-items:flex-start; gap:10px; cursor:pointer;
+  }
+  .secret-line:hover{ background:var(--ink-soft-2); }
+  .secret-line .mark{ flex-shrink:0; width:16px; height:16px; border:1.5px solid var(--ink-line); border-radius:3px; margin-top:2px; }
+  .secret-line.flagged .mark{ background:var(--amber); border-color:var(--amber); }
+  .secret-line.flagged{ color:var(--paper); }
+  .secret-line.result-correct{ background:rgba(91,156,141,.15); }
+  .secret-line.result-correct .mark{ background:var(--teal); border-color:var(--teal); }
+  .secret-line.result-missed{ background:rgba(192,57,43,.14); }
+  .secret-line.result-missed .mark{ border-color:var(--sev-critical); }
+  .secret-line.result-false-alarm .mark{ background:var(--sev-medium); border-color:var(--sev-medium); }
+  .line-explain{ font-family:var(--font-body); font-size:13px; color:var(--text-on-ink-dim); background:var(--ink-soft); border-left:2px solid var(--teal); padding:8px 12px; margin:2px 0 8px 0; border-radius:0 6px 6px 0; }
+  .secret-score{ font-family:var(--font-mono); font-size:14px; color:var(--amber); margin-top:12px; }
+
+  /* ---------- Tab 5 accordion ---------- */
+  details.vuln{ background:var(--ink-soft); border:1px solid var(--ink-line); border-radius:8px; margin-top:10px; overflow:hidden; }
+  details.vuln summary{ list-style:none; cursor:pointer; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-weight:700; color:var(--paper); }
+  details.vuln summary::-webkit-details-marker{ display:none; }
+  details.vuln summary .car{ font-family:var(--font-mono); color:var(--text-on-ink-dim); transition:transform .2s; }
+  details.vuln[open] summary .car{ transform:rotate(90deg); }
+  .vuln-body{ padding:0 16px 18px; }
+  .vuln-body h5{ font-family:var(--font-mono); font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--teal); margin:14px 0 6px; }
+  .vuln-body p{ color:var(--text-on-ink-dim); font-size:14px; }
+  .masvs-tag{ font-family:var(--font-mono); font-size:11px; color:var(--ink); background:var(--paper); padding:2px 8px; border-radius:5px; font-weight:700; }
+
+  /* ---------- Tab 6 quiz ---------- */
+  .quiz-question{ display:none; }
+  .quiz-question.active{ display:block; }
+  .quiz-meta{ font-family:var(--font-mono); font-size:12.5px; color:var(--text-on-paper-dim); margin-bottom:10px; }
+  .quiz-opts{ display:flex; flex-direction:column; gap:8px; margin-top:14px; }
+  .quiz-opt{ text-align:left; background:var(--paper-2); border:1.5px solid var(--paper-line); color:var(--text-on-paper); padding:11px 14px; border-radius:7px; font-size:14px; }
+  .quiz-opt:hover{ border-color:var(--amber-dim); }
+  .quiz-opt.correct{ background:rgba(91,156,141,.25); border-color:var(--teal); }
+  .quiz-opt.wrong{ background:rgba(192,57,43,.16); border-color:var(--sev-critical); }
+  .quiz-question.answered .quiz-opt{ pointer-events:none; opacity:.75; }
+  .quiz-question.answered .quiz-opt.correct, .quiz-question.answered .quiz-opt.wrong{ opacity:1; }
+  .quiz-explain{ display:none; margin-top:12px; background:var(--ink-soft); color:var(--text-on-ink-dim); border-left:3px solid var(--teal); padding:10px 14px; border-radius:0 6px 6px 0; font-size:13.8px; }
+  .quiz-explain.show{ display:block; }
+  .quiz-next{ display:none; margin-top:14px; }
+  .quiz-next.show{ display:inline-flex; }
+  .quiz-summary{ display:none; }
+  .quiz-summary.active{ display:block; }
+  .quiz-score-big{ font-family:var(--font-display); font-size:52px; font-weight:900; color:var(--amber-dim); }
+
+  /* ---------- Tab 7 tools ---------- */
+  .filter-row{ display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 4px; }
+  .tools-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:14px; margin-top:14px; }
+  .tool-card{ background:var(--ink-soft); border:1px solid var(--ink-line); border-radius:9px; padding:16px; }
+  .tool-card h4{ font-size:15px; color:var(--paper); display:flex; align-items:center; gap:8px; }
+  .tool-plat{ font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink); background:var(--teal); padding:2px 7px; border-radius:5px; }
+  .tool-card p{ font-size:13.3px; color:var(--text-on-ink-dim); margin-top:8px; }
+
+  /* ---------- Tab 8 checklist ---------- */
+  .progress-wrap{ background:var(--ink-soft); border:1px solid var(--ink-line); border-radius:8px; padding:14px 16px; margin:18px 0 6px; }
+  .progress-bar-track{ background:var(--ink); border-radius:6px; height:12px; overflow:hidden; margin-top:8px; }
+  .progress-bar-fill{ background:linear-gradient(90deg, var(--amber-dim), var(--amber)); height:100%; width:0%; transition:width .3s ease; }
+  .checklist-group{ margin-top:18px; }
+  .checklist-group h4{ font-size:13px; text-transform:uppercase; letter-spacing:.05em; font-family:var(--font-mono); color:var(--teal); }
+  .checklist-item{ display:flex; gap:10px; align-items:flex-start; padding:7px 0; font-size:14.3px; color:var(--text-on-ink-dim); }
+  .checklist-item input{ margin-top:4px; width:16px; height:16px; accent-color:var(--amber); flex-shrink:0; }
+  .checklist-item.checked{ color:var(--text-on-ink); }
+  .checklist-item.checked span{ text-decoration:line-through; text-decoration-color:var(--teal); }
+
+  .footnote{ font-size:12.5px; color:var(--text-on-ink-dim); margin-top:34px; border-top:1px solid var(--ink-line); padding-top:16px; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:880px){
+    .app-shell{ flex-direction:column; }
+    .sidebar{ width:100%; height:auto; position:sticky; top:0; z-index:5; padding:16px; }
+    .brand-title{ font-size:26px; }
+    .brand-sub{ display:none; }
+    .tab-list{ flex-direction:row; overflow-x:auto; gap:6px; padding-bottom:4px; }
+    .tab-btn{ flex-shrink:0; border-left:none; border-bottom:3px solid transparent; border-radius:6px 6px 0 0; }
+    .tab-btn.active{ border-bottom-color:var(--amber); }
+    .main{ max-height:none; padding:26px 18px 60px; }
+    .h-display{ font-size:28px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001s !important; transition-duration:.001s !important; scroll-behavior:auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ============ SIDEBAR ============ -->
+  <nav class="sidebar" aria-label="Danh mục hồ sơ học tập">
+    <div class="brand">
+      <div class="brand-eyebrow">Case File · Training</div>
+      <h1 class="brand-title">STATIC<br>ANALYSIS</h1>
+      <p class="brand-sub">Phân tích tĩnh ứng dụng di động — góc nhìn Pentest. Thuật ngữ kỹ thuật giữ nguyên tiếng Anh.</p>
+    </div>
+    <ul class="tab-list" role="tablist" aria-orientation="vertical" id="tabList">
+      <li role="presentation"><button class="tab-btn active" role="tab" data-tab="0" id="tabbtn-0" aria-controls="tab-0" aria-selected="true"><span class="tab-num">00</span><span class="tab-label">Mở đầu<em>Overview</em></span></button></li>
+      <li role="presentation"><button class="tab-btn" role="tab" data-tab="1" id="tabbtn-1" aria-controls="tab-1" aria-selected="false"><span class="tab-num">01</span><span class="tab-label">Cấu trúc gói tin<em>APK / IPA</em></span></button></li>
+      <li role="presentation"><button class="tab-btn" role="tab" data-tab="2" id="tabbtn-2" aria-controls="tab-2" aria-selected="false"><span class="tab-num">02</span><span class="tab-label">Quy trình<em>Workflow</em></span></button></li>
+      <li role="presentation"><button class="tab-btn" role="tab" data-tab="3" id="tabbtn-3" aria-controls="tab-3" aria-selected="false"><span class="tab-num">03</span><span class="tab-label">Soi Manifest<em>AndroidManifest.xml</em></span></button></li>
+      <li role="presentation"><button class="tab-btn" role="tab" data-tab="4" id="tabbtn-4" aria-controls="tab-4" aria-selected="false"><span class="tab-num">04</span><span class="tab-label">Săn bí mật<em>Secret Hunting</em></span></button></li>
+      <li role="presentation"><button class="tab-btn" role="tab" data-tab="5" id="tabbtn-5" aria-controls="tab-5" aria-selected="false"><span class="tab-num">05</span><span class="tab-label">Lỗ hổng thường gặp<em>Common Vulns</em></span></button></li>
+      <li role="presentation"><button class="tab-btn" role="tab" data-tab="6" id="tabbtn-6" aria-controls="tab-6" aria-selected="false"><span class="tab-num">06</span><span class="tab-label">Thử thách<em>Code Review Quiz</em></span></button></li>
+      <li role="presentation"><button class="tab-btn" role="tab" data-tab="7" id="tabbtn-7" aria-controls="tab-7" aria-selected="false"><span class="tab-num">07</span><span class="tab-label">Bộ công cụ<em>Toolbox</em></span></button></li>
+      <li role="presentation"><button class="tab-btn" role="tab" data-tab="8" id="tabbtn-8" aria-controls="tab-8" aria-selected="false"><span class="tab-num">08</span><span class="tab-label">Checklist<em>Wrap-up</em></span></button></li>
+    </ul>
+  </nav>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <!-- ===================== TAB 0 — OVERVIEW ===================== -->
+    <section class="tab-panel active" id="tab-0" role="tabpanel" aria-labelledby="tabbtn-0">
+      <div class="eyebrow">Hồ sơ 00 · Overview</div>
+      <h2 class="h-display">Static Analysis là gì, và vì sao pentester luôn bắt đầu từ đây?</h2>
+      <p class="lede">Trước khi cắm cáp, cài Frida hay bật Burp Suite lên soi traffic, hầu hết dân audit mobile app đều làm một việc rất "nhàn": mở gói cài đặt ra đọc — mà không chạy app một lần nào. Đó chính là <span class="kw">static analysis</span>.</p>
+
+      <div class="panel">
+        <div class="panel-clip"></div>
+        <h3>Static vs Dynamic Analysis</h3>
+        <div class="sub">Bấm để so sánh hai cách tiếp cận</div>
+        <div class="toggle-row">
+          <button class="toggle-btn active" data-mode="static">Static Analysis</button>
+          <button class="toggle-btn" data-mode="dynamic">Dynamic Analysis</button>
+        </div>
+        <div class="compare-grid">
+          <div class="mode-panel active" id="mode-static">
+            <dl class="fact-row">
+              <dt>Định nghĩa</dt><dd>Kiểm tra file <span class="kw-dark">.apk</span> / <span class="kw-dark">.ipa</span> mà <strong>không chạy</strong> ứng dụng — đọc code đã decompile, resource, file cấu hình, permission, chuỗi ký tự...</dd>
+              <dt>Công cụ</dt><dd><span class="kw-dark">jadx</span>, <span class="kw-dark">apktool</span>, <span class="kw-dark">MobSF</span>, <span class="kw-dark">Ghidra</span> — không cần app đang chạy.</dd>
+              <dt>Ưu điểm</dt><dd>An toàn (không đụng hệ thống thật), không cần rooted device/emulator, phát hiện sớm hardcoded secret, config sai, permission thừa.</dd>
+              <dt>Hạn chế</dt><dd>Không thấy được hành vi runtime thực tế; code bị obfuscate nặng sẽ khó đọc hơn nhiều.</dd>
+            </dl>
+          </div>
+          <div class="mode-panel" id="mode-dynamic">
+            <dl class="fact-row">
+              <dt>Định nghĩa</dt><dd>Chạy app trên thiết bị thật hoặc emulator và <strong>quan sát hành vi</strong> thực tế: network traffic, file I/O, API call, giá trị biến trong lúc chạy.</dd>
+              <dt>Công cụ</dt><dd><span class="kw-dark">Frida</span>, <span class="kw-dark">Objection</span>, <span class="kw-dark">Burp Suite</span> / <span class="kw-dark">mitmproxy</span> — cần app đang chạy.</dd>
+              <dt>Ưu điểm</dt><dd>Thấy hành vi thật, có thể hook hàm để bypass một số cơ chế bảo vệ runtime (ví dụ SSL pinning).</dd>
+              <dt>Hạn chế</dt><dd>Cần môi trường (device/emulator, đôi khi phải root), tốn thời gian hơn, có thể bị anti-debugging / anti-root chặn lại.</dd>
+            </dl>
+          </div>
+        </div>
+        <p style="margin-top:6px; font-size:13.6px; color:var(--text-on-paper-dim);">💡 Trong một bài test mobile app thực tế, hai kỹ thuật này <strong>không loại trừ nhau</strong> — static analysis thường được làm trước để định hướng, dynamic analysis làm sau để xác thực lại giả thuyết.</p>
+      </div>
+
+      <div class="scenario-box">
+        <div class="eyebrow">Ví dụ minh hoạ</div>
+        <p style="color:var(--text-on-ink-dim); max-width:62ch;">Trong một buổi đánh giá bảo mật giả định cho ứng dụng ngân hàng <strong style="color:var(--paper);">NovaBank</strong>, chỉ bằng static analysis — chưa bật app lên lần nào — pentester đã phát hiện: access token được lưu <span class="kw">plaintext</span> trong <span class="kw">SharedPreferences</span>, cờ <span class="kw">android:debuggable="true"</span> vẫn còn bật ở bản release, và một API key bị hardcode ngay trong <span class="kw">AndroidManifest.xml</span>. NovaBank là ví dụ giả định xuyên suốt tài liệu này — mọi mã nguồn, key, giá trị đều là dữ liệu minh hoạ, không phải của ứng dụng thật.</p>
+      </div>
+
+      <div class="hero-interactive" id="heroInteractive">
+        <div>
+          <svg viewBox="0 0 240 300" class="evidence-svg" aria-hidden="true" focusable="false">
+            <rect x="30" y="70" width="180" height="200" rx="16" class="pouch-body"></rect>
+            <line x1="30" y1="100" x2="210" y2="100" class="pouch-seam"></line>
+            <text x="120" y="160" text-anchor="middle" class="pouch-title-1">NOVABANK</text>
+            <text x="120" y="182" text-anchor="middle" class="pouch-title-2">.apk / .ipa</text>
+            <g class="barcode" transform="translate(70,208)">
+              <rect x="0" y="0" width="2" height="26"></rect><rect x="5" y="0" width="4" height="26"></rect>
+              <rect x="12" y="0" width="2" height="26"></rect><rect x="17" y="0" width="6" height="26"></rect>
+              <rect x="26" y="0" width="2" height="26"></rect><rect x="31" y="0" width="3" height="26"></rect>
+              <rect x="37" y="0" width="5" height="26"></rect><rect x="45" y="0" width="2" height="26"></rect>
+              <rect x="50" y="0" width="4" height="26"></rect><rect x="57" y="0" width="2" height="26"></rect>
+              <rect x="62" y="0" width="6" height="26"></rect><rect x="71" y="0" width="3" height="26"></rect>
+              <rect x="77" y="0" width="2" height="26"></rect><rect x="82" y="0" width="5" height="26"></rect>
+              <rect x="90" y="0" width="2" height="26"></rect><rect x="95" y="0" width="4" height="26"></rect>
+            </g>
+            <g class="pouch-flap">
+              <rect x="30" y="20" width="180" height="50" rx="10" class="pouch-flap-rect"></rect>
+              <circle cx="120" cy="45" r="28" class="pouch-seal"></circle>
+              <text x="120" y="41" text-anchor="middle" class="seal-text-1">TANG VẬT SỐ</text>
+              <text x="120" y="55" text-anchor="middle" class="seal-text-2">DIGITAL EVIDENCE</text>
+            </g>
+          </svg>
+          <div class="evidence-caption" id="heroCaption">👆 Bấm vào gói tin để "bóc niêm phong"</div>
+        </div>
+        <div class="hero-copy">
+          <h3 style="color:var(--paper); font-size:19px;">Một file <span class="kw">.apk</span> / <span class="kw">.ipa</span> chỉ là một túi bằng chứng đã niêm phong</h3>
+          <p style="color:var(--text-on-ink-dim);">Bên trong nó là ZIP archive chứa code đã biên dịch, resource, file cấu hình và chữ ký số. Toàn bộ hành trình static analysis, về cơ bản, chỉ là quá trình <em>mở túi bằng chứng này ra và đọc từng thứ bên trong</em> một cách có hệ thống.</p>
+          <button class="btn" id="heroOpenBtn" type="button">Bóc niêm phong gói tin</button>
+          <div class="evidence-reveal" id="heroReveal">
+            <ul class="reveal-list">
+              <li>META-INF/ — chữ ký số của app</li>
+              <li>AndroidManifest.xml — cấu hình lõi</li>
+              <li>classes.dex — bytecode để decompile</li>
+            </ul>
+            <button class="btn btn-ghost" id="heroCtaBtn" type="button" style="border-color:var(--amber); color:var(--amber);">Xem toàn bộ cấu trúc gói tin →</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="footnote">Tài liệu này tập trung vào <strong>static analysis</strong>. Các kỹ thuật dynamic analysis (Frida, Objection, SSL pinning bypass...) chỉ được nhắc đến để đối chiếu, không đi sâu.</p>
+    </section>
+
+    <!-- ===================== TAB 1 — STRUCTURE ===================== -->
+    <section class="tab-panel" id="tab-1" role="tabpanel" aria-labelledby="tabbtn-1">
+      <div class="eyebrow">Hồ sơ 01 · APK / IPA</div>
+      <h2 class="h-display">Bên trong gói tin có gì?</h2>
+      <p class="lede">Một file <span class="kw">.apk</span> (Android) hay <span class="kw">.ipa</span> (iOS) đều thực chất là một file <span class="kw">ZIP</span> — đổi đuôi thành <span class="kw">.zip</span> là giải nén được ngay bằng bất kỳ trình giải nén nào. Bấm vào từng file/thư mục bên dưới để xem vì sao pentester quan tâm đến nó.</p>
+
+      <div class="panel">
+        <div class="panel-clip"></div>
+        <div class="toggle-row">
+          <button class="view-btn toggle-btn active" data-view="apk" type="button">APK (Android)</button>
+          <button class="view-btn toggle-btn" data-view="ipa" type="button">IPA (iOS)</button>
+        </div>
+
+        <div class="tree-layout" style="margin-top:16px;">
+          <div class="tree-col">
+            <div class="tree-view active" id="treeApk">
+              <ul class="tree-root">
+                <li><button class="tree-node" data-target="apk-root" type="button">NovaBank.apk</button>
+                  <ul>
+                    <li><button class="tree-node" data-target="apk-metainf" type="button">META-INF/</button>
+                      <ul>
+                        <li><button class="tree-node" data-target="apk-manifestmf" type="button">MANIFEST.MF</button></li>
+                        <li><button class="tree-node" data-target="apk-certsf" type="button">CERT.SF</button></li>
+                        <li><button class="tree-node" data-target="apk-certrsa" type="button">CERT.RSA</button></li>
+                      </ul>
+                    </li>
+                    <li><button class="tree-node" data-target="apk-res" type="button">res/</button></li>
+                    <li><button class="tree-node" data-target="apk-assets" type="button">assets/</button></li>
+                    <li><button class="tree-node" data-target="apk-lib" type="button">lib/</button>
+                      <ul>
+                        <li><button class="tree-node" data-target="apk-libarch" type="button">arm64-v8a/, armeabi-v7a/, x86/</button></li>
+                      </ul>
+                    </li>
+                    <li><button class="tree-node" data-target="apk-manifestxml" type="button">AndroidManifest.xml</button></li>
+                    <li><button class="tree-node" data-target="apk-dex" type="button">classes.dex</button></li>
+                    <li><button class="tree-node" data-target="apk-dex2" type="button">classes2.dex</button></li>
+                    <li><button class="tree-node" data-target="apk-arsc" type="button">resources.arsc</button></li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+            <div class="tree-view" id="treeIpa">
+              <ul class="tree-root">
+                <li><button class="tree-node" data-target="ipa-root" type="button">NovaBank.ipa</button>
+                  <ul>
+                    <li><button class="tree-node" data-target="ipa-payload" type="button">Payload/</button>
+                      <ul>
+                        <li><button class="tree-node" data-target="ipa-app" type="button">NovaBank.app/</button>
+                          <ul>
+                            <li><button class="tree-node" data-target="ipa-infoplist" type="button">Info.plist</button></li>
+                            <li><button class="tree-node" data-target="ipa-macho" type="button">NovaBank (Mach-O executable)</button></li>
+                            <li><button class="tree-node" data-target="ipa-mobileprovision" type="button">embedded.mobileprovision</button></li>
+                            <li><button class="tree-node" data-target="ipa-codesign" type="button">_CodeSignature/</button></li>
+                            <li><button class="tree-node" data-target="ipa-frameworks" type="button">Frameworks/</button></li>
+                          </ul>
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="tree-col detail-col">
+            <div class="tree-detail active" id="detail-default">
+              <p class="hint">👈 Bấm vào 1 file hoặc thư mục bên trái để xem chi tiết tại đây.</p>
+            </div>
+
+            <div class="tree-detail" id="detail-apk-root">
+              <h4>NovaBank.apk</h4>
+              <p>Đây là file gốc — thực chất là 1 <span class="kw">ZIP archive</span>. Có thể giải nén trực tiếp bằng <span class="kw">unzip</span>, hoặc dùng <span class="kw">apktool</span> để decode luôn cả resource và Manifest sang dạng đọc được.</p>
+              <div class="why-line"><strong>Việc đầu tiên khi nhận 1 APK:</strong> kiểm tra hash (MD5/SHA-256) để đối chiếu đúng bản build đang test, tránh nhầm phiên bản.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-metainf">
+              <h4>META-INF/</h4>
+              <p>Thư mục chứa toàn bộ thông tin ký số (<span class="kw">code signing</span>) của gói APK.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> cho biết ai đã build & ký app này, và app là bản <span class="kw-dark">debug-signed</span> hay <span class="kw-dark">release-signed</span> — một app debug-signed lọt ra ngoài production là dấu hiệu quy trình release có vấn đề.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-manifestmf">
+              <h4>META-INF/MANIFEST.MF</h4>
+              <p>Liệt kê tên file và giá trị <span class="kw">hash (digest)</span> của từng file trong package — nền tảng để xác minh tính toàn vẹn.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> nếu 1 file trong APK bị chỉnh sửa sau khi ký mà digest không khớp, hệ thống cài đặt sẽ từ chối — đây là cơ chế chống <span class="kw-dark">tampering</span> cơ bản của Android.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-certsf">
+              <h4>META-INF/CERT.SF</h4>
+              <p>Chữ ký số trên chính nội dung của <span class="kw">MANIFEST.MF</span> — bước xác thực nối tiếp trong chuỗi ký.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> cùng với CERT.RSA, đây là bằng chứng "app này đúng là do bên giữ private key ký" — hữu ích khi cần xác minh nguồn gốc 1 bản APK nghi ngờ.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-certrsa">
+              <h4>META-INF/CERT.RSA</h4>
+              <p>Certificate + public key dùng để xác minh chữ ký ở trên.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> trích xuất được thông tin issuer, ngày hết hạn certificate — nếu certificate dùng để ký là self-signed với thời hạn rất dài hoặc thông tin issuer bất thường, đó có thể là dấu hiệu app giả mạo (fake app) khi so với bản chính hãng.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-res">
+              <h4>res/</h4>
+              <p>Resource ở dạng đã compile một phần: layout, drawable, một số giá trị string.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> layout đôi khi tiết lộ tên field/API ẩn (ví dụ 1 màn hình debug chưa gỡ), và <span class="kw">res/xml/network_security_config.xml</span> — file cấu hình bảo mật mạng — nằm ở đây.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-assets">
+              <h4>assets/</h4>
+              <p>Nơi developer nhét file thô tuỳ ý — không bị Android build tool xử lý/nén như res/.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> đây là "ngăn kéo hay bị quên" — pentester thường tìm thấy file config JSON, database mẫu, thậm chí cả private key hoặc file .env bị lỡ đóng gói vào đây.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-lib">
+              <h4>lib/</h4>
+              <p>Chứa native library dạng <span class="kw">.so</span>, biên dịch từ C/C++ (qua NDK), tổ chức theo kiến trúc CPU.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> logic nhạy cảm (crypto, chống dịch ngược, chống root) hay được đẩy xuống native code để gây khó cho reverse engineer — cần <span class="kw">Ghidra</span> hoặc <span class="kw">IDA</span> để phân tích ở mức assembly.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-libarch">
+              <h4>lib/arm64-v8a/, armeabi-v7a/, x86/</h4>
+              <p>Bản build riêng của cùng 1 thư viện native cho từng kiến trúc CPU (thiết bị thật thường là arm64-v8a/armeabi-v7a, emulator hay dùng x86/x86_64).</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> chọn đúng kiến trúc khớp với thiết bị/emulator đang test khi load thư viện vào Ghidra, tránh phân tích nhầm bản.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-manifestxml">
+              <h4>AndroidManifest.xml</h4>
+              <p>File cấu hình lõi của app: package name, permission, danh sách component (Activity/Service/Receiver/Provider), cờ bảo mật... nhưng ở dạng <span class="kw">binary XML</span>, không đọc trực tiếp được.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> đây gần như là <em>"bảng điều khiển bề mặt tấn công"</em> của app — xem chi tiết ở Hồ sơ 03. Cần <span class="kw">apktool</span> hoặc <span class="kw">aapt</span> để decode ra dạng text đọc được.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-dex">
+              <h4>classes.dex</h4>
+              <p><span class="kw">Dalvik bytecode</span> — chính là "code" của app sau khi Java/Kotlin source được biên dịch.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> đây là thứ ta <span class="kw">decompile</span> (bằng jadx hoặc dex2jar) để đọc lại gần như source code gốc — nơi tìm business logic, hardcoded secret, thuật toán mã hoá tự chế...</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-dex2">
+              <h4>classes2.dex (multidex)</h4>
+              <p>Khi app có hơn 65.536 method (rất phổ biến với app lớn như banking app), Android build tool phải tách bytecode thành nhiều file <span class="kw">.dex</span>.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> đừng quên decompile hết tất cả classesN.dex — business logic quan trọng có thể nằm ở file thứ 2, thứ 3 chứ không chỉ classes.dex đầu tiên.</div>
+            </div>
+            <div class="tree-detail" id="detail-apk-arsc">
+              <h4>resources.arsc</h4>
+              <p>Bảng ánh xạ resource đã compile: resource ID → giá trị (string, màu, dimension...).</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> chuỗi trong strings.xml gốc cuối cùng cũng nằm ở đây dưới dạng compiled — công cụ trích xuất string hàng loạt (ví dụ apkleaks) thường đọc thẳng từ file này.</div>
+            </div>
+
+            <div class="tree-detail" id="detail-ipa-root">
+              <h4>NovaBank.ipa</h4>
+              <p>Cũng là 1 <span class="kw">ZIP archive</span>, nhưng cấu trúc bên trong khác hẳn Android.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> giải nén bằng unzip là thấy ngay thư mục Payload/ — điểm bắt đầu của mọi phân tích IPA.</div>
+            </div>
+            <div class="tree-detail" id="detail-ipa-payload">
+              <h4>Payload/</h4>
+              <p>Thư mục chuẩn chứa bundle ứng dụng thực sự bên trong.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> mọi thứ đáng phân tích đều nằm trong thư mục con .app/ bên trong đây.</div>
+            </div>
+            <div class="tree-detail" id="detail-ipa-app">
+              <h4>NovaBank.app/</h4>
+              <p>Bundle chính của ứng dụng — tương đương "ruột" của app.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> đây là nơi chứa binary thực thi, file cấu hình, và toàn bộ resource — tương tự vai trò tổng hợp của APK bên Android.</div>
+            </div>
+            <div class="tree-detail" id="detail-ipa-infoplist">
+              <h4>Info.plist</h4>
+              <p>File cấu hình lõi — vai trò tương đương <span class="kw">AndroidManifest.xml</span> bên Android: bundle ID, permission usage description (ví dụ <span class="kw-dark">NSCameraUsageDescription</span>), URL scheme, cấu hình <span class="kw">ATS (App Transport Security)</span>.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> nếu ATS bị nới lỏng (cho phép <span class="kw-dark">NSAllowsArbitraryLoads</span>) thì app có thể gửi traffic không mã hoá — tương đương với usesCleartextTraffic bên Android.</div>
+            </div>
+            <div class="tree-detail" id="detail-ipa-macho">
+              <h4>NovaBank (Mach-O executable)</h4>
+              <p>Binary chính, biên dịch từ Swift/Objective-C.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> dùng <span class="kw">class-dump</span> để lấy thông tin class/method Objective-C, hoặc <span class="kw">Hopper</span>/<span class="kw">Ghidra</span>/<span class="kw">IDA</span> để reverse engineering sâu hơn — Swift thuần khó đọc hơn Objective-C nhiều vì tên bị "mangle".</div>
+            </div>
+            <div class="tree-detail" id="detail-ipa-mobileprovision">
+              <h4>embedded.mobileprovision</h4>
+              <p>Hồ sơ provisioning — cho biết app được build theo kiểu nào.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> phân biệt bản Development / Ad Hoc / App Store / Enterprise, và liệt kê <span class="kw-dark">entitlement</span> app được cấp — entitlement quá rộng cũng là một finding đáng ghi nhận.</div>
+            </div>
+            <div class="tree-detail" id="detail-ipa-codesign">
+              <h4>_CodeSignature/</h4>
+              <p>Chữ ký số của app — vai trò tương đương thư mục <span class="kw">META-INF/</span> bên Android.</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> xác minh app có bị chỉnh sửa sau khi ký hay không (tương tự cơ chế chống tampering của Android).</div>
+            </div>
+            <div class="tree-detail" id="detail-ipa-frameworks">
+              <h4>Frameworks/</h4>
+              <p>Chứa các <span class="kw">.framework</span>/<span class="kw">.dylib</span> mà app phụ thuộc vào (thư viện bên thứ ba, SDK phân tích, SDK thanh toán...).</p>
+              <div class="why-line"><strong>Vì sao quan tâm:</strong> SDK bên thứ ba lỗi thời cũng là bề mặt tấn công — nên liệt kê và đối chiếu version với CVE đã biết.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== TAB 2 — WORKFLOW ===================== -->
+    <section class="tab-panel" id="tab-2" role="tabpanel" aria-labelledby="tabbtn-2">
+      <div class="eyebrow">Hồ sơ 02 · Workflow</div>
+      <h2 class="h-display">Quy trình static analysis, từng bước một</h2>
+      <p class="lede">Đây là thứ tự phổ biến khi audit 1 mobile app — không phải luật cứng, nhưng đủ để bắt đầu có hệ thống thay vì mò mẫm. Bấm từng bước để xem lệnh & output minh hoạ.</p>
+
+      <div class="panel panel-dark">
+        <div class="steps-row" id="stepsRow">
+          <button class="step-btn active" data-step="1" type="button"><span class="n">1</span> Thu thập (Acquire)</button>
+          <button class="step-btn" data-step="2" type="button"><span class="n">2</span> Giải nén (Extract)</button>
+          <button class="step-btn" data-step="3" type="button"><span class="n">3</span> Decompile</button>
+          <button class="step-btn" data-step="4" type="button"><span class="n">4</span> Đọc Manifest</button>
+          <button class="step-btn" data-step="5" type="button"><span class="n">5</span> Review code / Secrets</button>
+          <button class="step-btn" data-step="6" type="button"><span class="n">6</span> Network & Crypto config</button>
+          <button class="step-btn" data-step="7" type="button"><span class="n">7</span> Tổng hợp finding</button>
+        </div>
+
+        <div class="step-detail active" data-stepdetail="1">
+          <p style="margin-top:16px;">Lấy được file <span class="kw">.apk</span>/<span class="kw">.ipa</span> cần test — từ thiết bị qua <span class="kw">adb</span>, từ bản build client cung cấp, hoặc qua kênh phân phối hợp lệ khi đã có ủy quyền test.</p>
+        </div>
+        <div class="step-detail" data-stepdetail="2">
+          <p style="margin-top:16px;">Giải nén gói tin ra để bắt đầu soi cấu trúc — xem lại Hồ sơ 01 nếu chưa rõ từng file bên trong là gì.</p>
+        </div>
+        <div class="step-detail" data-stepdetail="3">
+          <p style="margin-top:16px;">Chuyển bytecode/binary trở lại gần với source code đọc được. Với Android có 2 lựa chọn phổ biến: <span class="kw">jadx</span> (đọc nhanh, GUI trực quan) hoặc <span class="kw">apktool</span> (khi cần cả resource gốc + smali để rebuild lại app).</p>
+        </div>
+        <div class="step-detail" data-stepdetail="4">
+          <p style="margin-top:16px;">Đọc kỹ <span class="kw">AndroidManifest.xml</span> (Android) hoặc <span class="kw">Info.plist</span> (iOS) — gần như một "bản đồ bề mặt tấn công" thu nhỏ của app. Xem chi tiết ở Hồ sơ 03.</p>
+        </div>
+        <div class="step-detail" data-stepdetail="5">
+          <p style="margin-top:16px;">Đọc code đã decompile, đặc biệt các class liên quan auth, lưu trữ, mạng — kết hợp tìm kiếm hàng loạt theo pattern để không bỏ sót hardcoded secret. Thực hành ở Hồ sơ 04.</p>
+        </div>
+        <div class="step-detail" data-stepdetail="6">
+          <p style="margin-top:16px;">Kiểm tra <span class="kw-dark">network_security_config.xml</span>, cách app dùng <span class="kw-dark">Cipher</span>/<span class="kw-dark">MessageDigest</span>, và có custom <span class="kw-dark">TrustManager</span> nào bỏ qua việc verify certificate hay không.</p>
+        </div>
+        <div class="step-detail" data-stepdetail="7">
+          <p style="margin-top:16px;">Không có terminal cho bước này — đây là lúc viết finding: mô tả vấn đề, mức độ nghiêm trọng (severity), bằng chứng (đoạn code/dòng Manifest cụ thể), và khuyến nghị khắc phục rõ ràng, có thể hành động được.</p>
+        </div>
+
+        <div class="term" id="stepTermWrap">
+          <div class="term-bar"><span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span></div>
+          <pre id="stepTermOutput"></pre>
+        </div>
+        <p class="step-note" id="stepTermNote"></p>
+      </div>
+    </section>
+
+    <!-- ===================== TAB 3 — MANIFEST ===================== -->
+    <section class="tab-panel" id="tab-3" role="tabpanel" aria-labelledby="tabbtn-3">
+      <div class="eyebrow">Hồ sơ 03 · AndroidManifest.xml</div>
+      <h2 class="h-display">Soi từng dòng Manifest như một pentester</h2>
+      <p class="lede">Đây là bản Manifest rút gọn (đã decode) của app <span class="kw">NovaBank</span> — mọi giá trị đều là dữ liệu minh hoạ. Bấm vào các dòng được tô sáng để xem mức độ nghiêm trọng và cách khai thác.</p>
+
+      <div class="sev-legend">
+        <span><span class="badge badge-critical">Critical</span> nghiêm trọng nhất</span>
+        <span><span class="badge badge-high">High</span> nguy hiểm</span>
+        <span><span class="badge badge-medium">Medium</span> cần lưu ý</span>
+        <span><span class="badge badge-low">Low</span> rủi ro thấp</span>
+        <span><span class="badge badge-info">Info</span> chỉ mang tính thông tin</span>
+      </div>
+
+      <div class="manifest-wrap">
+        <div class="manifest-code-col">
+          <pre class="manifest-code">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    <span class="mline" data-target="m1">package="com.novabank.mobile"
+    android:versionCode="42"
+    android:versionName="3.4.1"</span>&gt;
+
+    <span class="mline" data-target="m2">&lt;uses-sdk android:minSdkVersion="19" android:targetSdkVersion="24" /&gt;</span>
+
+    &lt;uses-permission android:name="android.permission.INTERNET" /&gt;
+    &lt;uses-permission android:name="android.permission.CAMERA" /&gt;
+    <span class="mline" data-target="m3">&lt;uses-permission android:name="android.permission.READ_SMS" /&gt;</span>
+
+    &lt;application
+        <span class="mline" data-target="m4">android:allowBackup="true"</span>
+        <span class="mline" data-target="m5">android:debuggable="true"</span>
+        <span class="mline" data-target="m6">android:usesCleartextTraffic="true"</span>
+        <span class="mline" data-target="m7">android:networkSecurityConfig="@xml/network_security_config"</span>
+        android:label="NovaBank"&gt;
+
+        <span class="mline" data-target="m8">&lt;activity android:name=".DeepLinkActivity" android:exported="true"&gt;
+            &lt;intent-filter&gt;
+                &lt;action android:name="android.intent.action.VIEW" /&gt;
+                &lt;data android:scheme="novabank" /&gt;
+            &lt;/intent-filter&gt;
+        &lt;/activity&gt;</span>
+
+        <span class="mline" data-target="m9">&lt;provider
+            android:name=".FileProvider"
+            android:exported="true"
+            android:grantUriPermissions="true" /&gt;</span>
+
+        <span class="mline" data-target="m10">&lt;meta-data
+            android:name="com.google.android.maps.v2.API_KEY"
+            android:value="AIzaSyD4rP9xampleNotARealKey000" /&gt;</span>
+
+    &lt;/application&gt;
+&lt;/manifest&gt;</pre>
+          <div class="progress-line">Đã kiểm tra: <b id="mProgressCount">0</b> / 10 dòng</div>
+        </div>
+
+        <div class="manifest-detail-col">
+          <div class="panel panel-dark m-detail active" id="mdetail-default" style="margin-top:0;">
+            <p style="color:var(--text-on-ink-dim);">👈 Bấm vào 1 dòng được tô sáng trong Manifest để xem phân tích tại đây.</p>
+          </div>
+
+          <div class="panel panel-dark m-detail" id="mdetail-m1" style="margin-top:0;">
+            <span class="badge badge-info">Info</span>
+            <h3 style="margin-top:10px; color:var(--paper);">package / versionCode / versionName</h3>
+            <p>Định danh gói và số phiên bản build. Không phải lỗ hổng, nhưng luôn ghi lại — <span class="kw-dark">versionCode</span> giúp đối chiếu app có đang chạy 1 version cũ với lỗ hổng đã biết (CVE) hay không.</p>
+          </div>
+          <div class="panel panel-dark m-detail" id="mdetail-m2" style="margin-top:0;">
+            <span class="badge badge-medium">Medium</span>
+            <h3 style="margin-top:10px; color:var(--paper);">minSdkVersion / targetSdkVersion thấp</h3>
+            <p><span class="kw-dark">minSdkVersion="19"</span> nghĩa là vẫn hỗ trợ Android 4.4 — thiếu rất nhiều cơ chế bảo vệ nền tảng hiện đại. <span class="kw-dark">targetSdkVersion="24"</span> thấp cũng khiến app không được áp các mặc định an toàn hơn mà Android bản mới yêu cầu (ví dụ network security config chỉ bắt buộc từ API 24 trở lên theo mặc định khắt khe hơn ở các bản sau).</p>
+          </div>
+          <div class="panel panel-dark m-detail" id="mdetail-m3" style="margin-top:0;">
+            <span class="badge badge-medium">Medium</span>
+            <h3 style="margin-top:10px; color:var(--paper);">Over-permission — READ_SMS</h3>
+            <p>Một app ngân hàng xin quyền đọc SMS (thường viện lý do "tự động điền OTP") nhưng không có giải trình rõ ràng trong Manifest là dấu hiệu <span class="kw">over-permission</span>. Permission càng rộng, thiệt hại càng lớn nếu app hoặc 1 thành phần của nó bị khai thác.</p>
+          </div>
+          <div class="panel panel-dark m-detail" id="mdetail-m4" style="margin-top:0;">
+            <span class="badge badge-high">High</span>
+            <h3 style="margin-top:10px; color:var(--paper);">android:allowBackup="true"</h3>
+            <p>Cho phép <span class="kw-dark">adb backup</span> lấy toàn bộ dữ liệu app ra — kể cả khi thiết bị chưa root. Với 1 app lưu token/session trong SharedPreferences hoặc database nội bộ, đây là đường tắt để trích xuất dữ liệu đó ra phân tích offline.</p>
+          </div>
+          <div class="panel panel-dark m-detail" id="mdetail-m5" style="margin-top:0;">
+            <span class="badge badge-critical">Critical</span>
+            <h3 style="margin-top:10px; color:var(--paper);">android:debuggable="true"</h3>
+            <p>Cho phép attach debugger vào tiến trình app ngay ở bản release. Kẻ tấn công có thể debug trực tiếp, đọc bộ nhớ runtime, đặt breakpoint để bypass logic kiểm tra (ví dụ màn hình xác thực). Đây gần như luôn là lỗi cấu hình build, không bao giờ nên xuất hiện ở bản production.</p>
+          </div>
+          <div class="panel panel-dark m-detail" id="mdetail-m6" style="margin-top:0;">
+            <span class="badge badge-high">High</span>
+            <h3 style="margin-top:10px; color:var(--paper);">android:usesCleartextTraffic="true"</h3>
+            <p>Cho phép app gửi traffic qua HTTP thuần (không mã hoá) đến bất kỳ domain nào chưa bị chặn riêng. Nếu app lỡ gọi dù chỉ 1 endpoint qua HTTP, dữ liệu trên đường truyền có thể bị đọc/sửa qua tấn công Man-in-the-Middle.</p>
+          </div>
+          <div class="panel panel-dark m-detail" id="mdetail-m7" style="margin-top:0;">
+            <span class="badge badge-info">Info / Tín hiệu tốt</span>
+            <h3 style="margin-top:10px; color:var(--paper);">android:networkSecurityConfig</h3>
+            <p>Đây là điểm đáng khen — app có khai báo file cấu hình bảo mật mạng riêng. Nhưng đừng dừng lại ở đây: phải mở tiếp <span class="kw-dark">res/xml/network_security_config.xml</span> để kiểm tra, vì file này hoàn toàn có thể chứa cấu hình cho phép cleartext theo từng domain, hoặc trust-anchor không phù hợp.</p>
+          </div>
+          <div class="panel panel-dark m-detail" id="mdetail-m8" style="margin-top:0;">
+            <span class="badge badge-high">High</span>
+            <h3 style="margin-top:10px; color:var(--paper);">Exported Activity + Deep Link</h3>
+            <p>Activity được export ra ngoài (<span class="kw-dark">exported="true"</span>) kèm intent-filter nhận deep link theo scheme <span class="kw-dark">novabank://</span>. Nếu Activity này không validate kỹ dữ liệu đầu vào từ Intent, một app khác (kể cả app độc hại đã cài trên cùng máy) có thể gọi thẳng vào Activity này, có nguy cơ bypass luồng xác thực hoặc kích hoạt hành động ngoài ý muốn.</p>
+          </div>
+          <div class="panel panel-dark m-detail" id="mdetail-m9" style="margin-top:0;">
+            <span class="badge badge-critical">Critical</span>
+            <h3 style="margin-top:10px; color:var(--paper);">ContentProvider export không kiểm soát</h3>
+            <p><span class="kw-dark">exported="true"</span> cùng <span class="kw-dark">grantUriPermissions="true"</span> mà không kèm permission hay path-permission nào — app khác trên cùng thiết bị có thể đọc/ghi dữ liệu qua Provider này. Đây là một trong những nguồn phổ biến nhất dẫn tới path traversal hoặc rò rỉ file nội bộ trên Android.</p>
+          </div>
+          <div class="panel panel-dark m-detail" id="mdetail-m10" style="margin-top:0;">
+            <span class="badge badge-critical">Critical</span>
+            <h3 style="margin-top:10px; color:var(--paper);">Hardcoded API key trong Manifest</h3>
+            <p>Key nằm thẳng trong file mà bất kỳ ai giải nén APK cũng đọc được. Tuỳ vào quyền hạn của key (ví dụ quota của 1 dịch vụ bản đồ), hậu quả có thể từ bị lạm dụng quota, phát sinh chi phí, cho tới nguy hiểm hơn nếu key đó có phạm vi quyền rộng hơn cần thiết.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== TAB 4 — SECRET HUNTING ===================== -->
+    <section class="tab-panel" id="tab-4" role="tabpanel" aria-labelledby="tabbtn-4">
+      <div class="eyebrow">Hồ sơ 04 · Secret Hunting</div>
+      <h2 class="h-display">Thực hành: săn bí mật trong một string dump</h2>
+      <p class="lede">Bên dưới là một đoạn giả lập output kiểu <span class="kw">strings</span> / hằng số đã decompile từ app NovaBank (toàn bộ giá trị là dữ liệu mẫu, không phải secret thật). Bấm vào những dòng bạn nghi là bí mật nhạy cảm, sau đó bấm <strong>Kiểm tra kết quả</strong>.</p>
+
+      <div class="panel panel-dark">
+        <div class="secret-console" id="secretConsole"></div>
+        <div class="btn-row">
+          <button class="btn" id="secretCheckBtn" type="button">Kiểm tra kết quả</button>
+          <button class="btn-ghost" id="secretResetBtn" type="button">Làm lại</button>
+        </div>
+        <div class="secret-score" id="secretScore"></div>
+      </div>
+    </section>
+
+    <!-- ===================== TAB 5 — COMMON VULNS ===================== -->
+    <section class="tab-panel" id="tab-5" role="tabpanel" aria-labelledby="tabbtn-5">
+      <div class="eyebrow">Hồ sơ 05 · Common Vulnerabilities</div>
+      <h2 class="h-display">8 nhóm lỗ hổng hay gặp nhất qua static analysis</h2>
+      <p class="lede">Bấm vào từng mục để mở rộng: mô tả, ví dụ code (minh hoạ), dấu hiệu nhận biết khi đọc code tĩnh, và hướng khắc phục. Nhãn góc phải tham chiếu nhóm trong <span class="kw">OWASP MASVS</span>.</p>
+
+      <details class="vuln" open>
+        <summary>Hardcoded Secrets &amp; API Keys <span class="car">›</span></summary>
+        <div class="vuln-body">
+          <span class="masvs-tag">MASVS-STORAGE</span>
+          <h5>Ví dụ (minh hoạ)</h5>
+          <pre class="mono-block">private static final String API_KEY = "sk_live_51H8xxxxxxxxxxxxxxxx";</pre>
+          <h5>Dấu hiệu qua static analysis</h5>
+          <p>Search string bất thường / entropy cao trong code đã decompile hoặc trong resource; các tiền tố quen thuộc như <span class="kw-dark">AKIA</span> (AWS), <span class="kw-dark">AIza</span> (Google), <span class="kw-dark">sk_live_</span> (Stripe) rất dễ grep.</p>
+          <h5>Khắc phục</h5>
+          <p>Đưa secret về backend, không bao giờ hardcode secret nhạy cảm ở phía client; nếu bắt buộc phải có key ở client, dùng Android Keystore hoặc inject lúc build và giới hạn quyền hạn của key tối thiểu.</p>
+        </div>
+      </details>
+
+      <details class="vuln">
+        <summary>Insecure Data Storage <span class="car">›</span></summary>
+        <div class="vuln-body">
+          <span class="masvs-tag">MASVS-STORAGE</span>
+          <h5>Ví dụ (minh hoạ)</h5>
+          <pre class="mono-block">SharedPreferences sp = getSharedPreferences("auth", MODE_PRIVATE);
+sp.edit().putString("access_token", token).apply();</pre>
+          <h5>Dấu hiệu qua static analysis</h5>
+          <p>Grep <span class="kw-dark">getSharedPreferences</span>, <span class="kw-dark">SQLiteDatabase</span>; sau khi giải nén data thư mục app (trên thiết bị root hoặc qua backup), mở trực tiếp file .xml/.db xem có plaintext không.</p>
+          <h5>Khắc phục</h5>
+          <p>Mã hoá dữ liệu nhạy cảm bằng <span class="kw-dark">EncryptedSharedPreferences</span> hoặc lưu qua Android Keystore, không lưu token/mật khẩu ở dạng đọc được trực tiếp.</p>
+        </div>
+      </details>
+
+      <details class="vuln">
+        <summary>Insecure WebView Configuration <span class="car">›</span></summary>
+        <div class="vuln-body">
+          <span class="masvs-tag">MASVS-PLATFORM</span>
+          <h5>Ví dụ (minh hoạ)</h5>
+          <pre class="mono-block">webView.getSettings().setJavaScriptEnabled(true);
+webView.addJavascriptInterface(new JSBridge(), "Android");</pre>
+          <h5>Dấu hiệu qua static analysis</h5>
+          <p>Grep <span class="kw-dark">addJavascriptInterface</span>, <span class="kw-dark">setJavaScriptEnabled(true)</span>, và các lệnh <span class="kw-dark">loadUrl</span> nhận input động (từ Intent, deep link...).</p>
+          <h5>Khắc phục</h5>
+          <p>Hạn chế tối đa JavascriptInterface, đánh dấu method public bằng <span class="kw-dark">@JavascriptInterface</span> có chọn lọc, validate origin trước khi load nội dung không tin cậy.</p>
+        </div>
+      </details>
+
+      <details class="vuln">
+        <summary>Weak / Broken Cryptography <span class="car">›</span></summary>
+        <div class="vuln-body">
+          <span class="masvs-tag">MASVS-CRYPTO</span>
+          <h5>Ví dụ (minh hoạ)</h5>
+          <pre class="mono-block">Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");</pre>
+          <h5>Dấu hiệu qua static analysis</h5>
+          <p>Grep <span class="kw-dark">Cipher.getInstance</span> tìm chế độ <span class="kw-dark">ECB</span> (không có IV, để lộ pattern dữ liệu), hoặc <span class="kw-dark">MessageDigest.getInstance("MD5")</span>/<span class="kw-dark">"SHA1"</span> dùng cho việc băm mật khẩu.</p>
+          <h5>Khắc phục</h5>
+          <p>Dùng <span class="kw-dark">AES/GCM</span> với IV ngẫu nhiên cho mỗi lần mã hoá; dùng <span class="kw-dark">bcrypt</span>/<span class="kw-dark">Argon2</span> cho việc lưu trữ mật khẩu, không dùng hash thường cho mục đích này.</p>
+        </div>
+      </details>
+
+      <details class="vuln">
+        <summary>Insecure Network Communication <span class="car">›</span></summary>
+        <div class="vuln-body">
+          <span class="masvs-tag">MASVS-NETWORK</span>
+          <h5>Ví dụ (minh hoạ)</h5>
+          <pre class="mono-block">public void checkServerTrusted(X509Certificate[] chain, String authType) {
+    // để trống — không throw exception nào cả
+}</pre>
+          <h5>Dấu hiệu qua static analysis</h5>
+          <p>Tìm <span class="kw-dark">usesCleartextTraffic</span>, custom <span class="kw-dark">X509TrustManager</span>/<span class="kw-dark">HostnameVerifier</span> luôn trả về true hoặc có thân hàm rỗng bất thường.</p>
+          <h5>Khắc phục</h5>
+          <p>Enforce HTTPS cho toàn bộ traffic, cân nhắc certificate pinning cho các API nhạy cảm, không bao giờ override logic verify certificate để "cho tiện lúc dev" rồi quên gỡ ở bản release.</p>
+        </div>
+      </details>
+
+      <details class="vuln">
+        <summary>Excessive / Dangerous Permissions <span class="car">›</span></summary>
+        <div class="vuln-body">
+          <span class="masvs-tag">MASVS-PLATFORM</span>
+          <h5>Dấu hiệu qua static analysis</h5>
+          <p>Liệt kê toàn bộ <span class="kw-dark">&lt;uses-permission&gt;</span> trong Manifest, đối chiếu với chức năng thực tế của app — permission nào không giải thích được lý do nghiệp vụ là điểm cần hỏi lại đội phát triển.</p>
+          <h5>Khắc phục</h5>
+          <p>Áp dụng nguyên tắc least privilege: chỉ xin permission thật sự cần thiết, và xin theo kiểu runtime request đúng lúc cần dùng thay vì khai báo tràn lan.</p>
+        </div>
+      </details>
+
+      <details class="vuln">
+        <summary>Exported Components Without Protection <span class="car">›</span></summary>
+        <div class="vuln-body">
+          <span class="masvs-tag">MASVS-PLATFORM</span>
+          <h5>Dấu hiệu qua static analysis</h5>
+          <p>Soi từng Activity/Service/Receiver/Provider trong Manifest, tìm <span class="kw-dark">exported="true"</span> mà không đi kèm <span class="kw-dark">android:permission</span> hoặc kiểm tra caller trong code.</p>
+          <h5>Khắc phục</h5>
+          <p>Đặt <span class="kw-dark">exported="false"</span> nếu component chỉ dùng nội bộ; nếu bắt buộc export, bảo vệ bằng custom permission ở mức <span class="kw-dark">signature</span>.</p>
+        </div>
+      </details>
+
+      <details class="vuln">
+        <summary>Thiếu Code Obfuscation / Tamper Protection <span class="car">›</span></summary>
+        <div class="vuln-body">
+          <span class="masvs-tag">MASVS-RESILIENCE</span>
+          <h5>Dấu hiệu qua static analysis</h5>
+          <p>Mở bằng jadx thấy code sạch đẹp, tên class/method rõ ràng kiểu <span class="kw-dark">LoginActivity.validateOtp()</span> — gần như đọc được nguyên bản logic nghiệp vụ.</p>
+          <h5>Khắc phục</h5>
+          <p>Bật <span class="kw-dark">R8</span>/<span class="kw-dark">ProGuard</span> ở chế độ full obfuscation cho bản release; với app nhạy cảm (banking, ví điện tử) cân nhắc thêm lớp anti-tampering/root-detection, dù cần lưu ý các cơ chế này cũng chỉ làm chậm attacker chứ không ngăn tuyệt đối.</p>
+        </div>
+      </details>
+    </section>
+
+    <!-- ===================== TAB 6 — QUIZ ===================== -->
+    <section class="tab-panel" id="tab-6" role="tabpanel" aria-labelledby="tabbtn-6">
+      <div class="eyebrow">Hồ sơ 06 · Code Review Quiz</div>
+      <h2 class="h-display">Thử thách: soi mã nguồn NovaBank</h2>
+      <p class="lede">5 đoạn code minh hoạ, mỗi đoạn có 1 câu hỏi trắc nghiệm. Chọn đáp án để xem giải thích ngay lập tức.</p>
+
+      <div class="panel">
+        <div class="panel-clip"></div>
+
+        <div class="quiz-question active" data-qindex="0">
+          <div class="quiz-meta">Câu 1 / 5</div>
+          <pre class="mono-block" style="color:var(--text-on-paper); background:var(--ink-soft);">&lt;application
+    android:allowBackup="true"
+    android:debuggable="false"
+    android:usesCleartextTraffic="false"&gt;</pre>
+          <h3>Thuộc tính nào trong đoạn Manifest trên cho phép trích xuất toàn bộ dữ liệu app qua <span class="kw">adb backup</span> mà không cần root?</h3>
+          <div class="quiz-opts">
+            <button class="quiz-opt" data-correct="false">android:debuggable</button>
+            <button class="quiz-opt" data-correct="true">android:allowBackup</button>
+            <button class="quiz-opt" data-correct="false">android:usesCleartextTraffic</button>
+            <button class="quiz-opt" data-correct="false">android:exported</button>
+          </div>
+          <div class="quiz-explain">Chính xác là <strong>android:allowBackup</strong>. Khi để "true", <span class="kw-dark">adb backup</span> có thể lấy toàn bộ dữ liệu app ra file, kể cả trên thiết bị chưa root — rất hữu ích cho attacker nếu app lưu token/session không mã hoá.</div>
+          <button class="btn quiz-next" type="button">Câu tiếp theo →</button>
+        </div>
+
+        <div class="quiz-question" data-qindex="1">
+          <div class="quiz-meta">Câu 2 / 5</div>
+          <pre class="mono-block" style="color:var(--text-on-paper); background:var(--ink-soft);">Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
+c.init(Cipher.ENCRYPT_MODE, secretKey);</pre>
+          <h3>Chế độ mã hoá nào trong đoạn code trên bị xem là yếu / không an toàn cho dữ liệu nhạy cảm?</h3>
+          <div class="quiz-opts">
+            <button class="quiz-opt" data-correct="false">AES/GCM</button>
+            <button class="quiz-opt" data-correct="true">AES/ECB</button>
+            <button class="quiz-opt" data-correct="false">RSA/OAEP</button>
+            <button class="quiz-opt" data-correct="false">ChaCha20-Poly1305</button>
+          </div>
+          <div class="quiz-explain">Chính xác là <strong>AES/ECB</strong>. Chế độ ECB mã hoá từng block độc lập, không dùng IV, nên các block dữ liệu giống nhau sẽ cho ra ciphertext giống nhau — làm lộ pattern của dữ liệu gốc dù đã "mã hoá".</div>
+          <button class="btn quiz-next" type="button">Câu tiếp theo →</button>
+        </div>
+
+        <div class="quiz-question" data-qindex="2">
+          <div class="quiz-meta">Câu 3 / 5</div>
+          <pre class="mono-block" style="color:var(--text-on-paper); background:var(--ink-soft);">webView.getSettings().setJavaScriptEnabled(true);
+webView.addJavascriptInterface(new JSBridge(), "Android");
+webView.loadUrl(getIntent().getStringExtra("target_url"));</pre>
+          <h3>Đoạn code trên thuộc nhóm lỗ hổng nào?</h3>
+          <div class="quiz-opts">
+            <button class="quiz-opt" data-correct="false">SQL Injection</button>
+            <button class="quiz-opt" data-correct="false">Insecure Data Storage</button>
+            <button class="quiz-opt" data-correct="true">Insecure WebView Configuration</button>
+            <button class="quiz-opt" data-correct="false">Weak Cryptography</button>
+          </div>
+          <div class="quiz-explain">Chính xác là <strong>Insecure WebView Configuration</strong>. Kết hợp <span class="kw-dark">addJavascriptInterface</span> với việc load URL lấy trực tiếp từ Intent (không validate) tạo nguy cơ JavaScript injection và lộ luôn native interface cho nội dung không tin cậy.</div>
+          <button class="btn quiz-next" type="button">Câu tiếp theo →</button>
+        </div>
+
+        <div class="quiz-question" data-qindex="3">
+          <div class="quiz-meta">Câu 4 / 5</div>
+          <pre class="mono-block" style="color:var(--text-on-paper); background:var(--ink-soft);">&lt;provider
+    android:name=".FileProvider"
+    android:exported="true"
+    android:grantUriPermissions="true" /&gt;</pre>
+          <h3>Rủi ro chính của cấu hình ContentProvider trên là gì?</h3>
+          <div class="quiz-opts">
+            <button class="quiz-opt" data-correct="true">Ứng dụng khác có thể đọc/ghi dữ liệu qua Provider mà không cần quyền</button>
+            <button class="quiz-opt" data-correct="false">App sẽ bị Google Play từ chối duyệt ngay lập tức</button>
+            <button class="quiz-opt" data-correct="false">App sẽ tự động tăng dung lượng cài đặt</button>
+            <button class="quiz-opt" data-correct="false">App sẽ chạy chậm hơn đáng kể</button>
+          </div>
+          <div class="quiz-explain">Chính xác là phương án đầu tiên. Provider export ra ngoài mà thiếu permission hoặc path-permission kiểm soát là một trong những nguồn phổ biến nhất dẫn tới rò rỉ dữ liệu hoặc path traversal trên Android.</div>
+          <button class="btn quiz-next" type="button">Câu tiếp theo →</button>
+        </div>
+
+        <div class="quiz-question" data-qindex="4">
+          <div class="quiz-meta">Câu 5 / 5</div>
+          <pre class="mono-block" style="color:var(--text-on-paper); background:var(--ink-soft);">public void checkServerTrusted(X509Certificate[] chain, String authType) {
+    // để trống — không throw exception nào cả
+}</pre>
+          <h3>Đoạn code này khiến ứng dụng dễ bị tấn công nào nhất?</h3>
+          <div class="quiz-opts">
+            <button class="quiz-opt" data-correct="false">SQL Injection</button>
+            <button class="quiz-opt" data-correct="true">Man-in-the-Middle (do bỏ qua kiểm tra chứng chỉ SSL)</button>
+            <button class="quiz-opt" data-correct="false">Buffer Overflow</button>
+            <button class="quiz-opt" data-correct="false">Clickjacking</button>
+          </div>
+          <div class="quiz-explain">Chính xác là <strong>Man-in-the-Middle</strong>. Một <span class="kw-dark">X509TrustManager</span> với thân hàm rỗng chấp nhận mọi certificate, kể cả certificate giả mạo — kẻ tấn công ở giữa đường truyền có thể đọc/sửa dữ liệu mà app không hề hay biết.</div>
+          <button class="btn quiz-next" type="button">Câu tiếp theo →</button>
+        </div>
+
+        <div class="quiz-summary" id="quizSummary">
+          <div class="quiz-score-big"><span id="quizScoreNum">0</span>/5</div>
+          <p>câu trả lời đúng. Bấm "Làm lại" để thử lại từ đầu, hoặc quay lại Hồ sơ 05 để ôn lại các nhóm lỗ hổng.</p>
+          <button class="btn" id="quizRetryBtn" type="button">Làm lại</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== TAB 7 — TOOLBOX ===================== -->
+    <section class="tab-panel" id="tab-7" role="tabpanel" aria-labelledby="tabbtn-7">
+      <div class="eyebrow">Hồ sơ 07 · Toolbox</div>
+      <h2 class="h-display">Bộ công cụ cho static analysis</h2>
+      <p class="lede">Lọc theo nền tảng để xem công cụ nào phù hợp với việc bạn đang làm.</p>
+
+      <div class="filter-row" id="toolFilterRow">
+        <button class="btn-ghost active-filter" data-filter="all" type="button">Tất cả</button>
+        <button class="btn-ghost" data-filter="android" type="button">Android</button>
+        <button class="btn-ghost" data-filter="ios" type="button">iOS</button>
+        <button class="btn-ghost" data-filter="cross" type="button">Đa nền tảng</button>
+      </div>
+
+      <div class="tools-grid" id="toolsGrid">
+        <div class="tool-card" data-platform="android"><h4>jadx / jadx-gui <span class="tool-plat">Android</span></h4><p>Decompile <span class="kw-dark">.dex</span> → Java source đọc được gần như code gốc. GUI trực quan, search toàn project nhanh. Hạn chế: code obfuscate nặng vẫn khó đọc.</p></div>
+        <div class="tool-card" data-platform="android"><h4>apktool <span class="tool-plat">Android</span></h4><p>Decode resource + Manifest ra dạng đọc được, kèm smali code. Dùng khi cần <em>rebuild/patch</em> lại APK, ví dụ thêm log debug hoặc vô hiệu hoá tạm 1 check để phục vụ test.</p></div>
+        <div class="tool-card" data-platform="android"><h4>dex2jar + JD-GUI <span class="tool-plat">Android</span></h4><p>Chuyển <span class="kw-dark">.dex</span> → <span class="kw-dark">.jar</span> rồi mở bằng JD-GUI để xem lại Java source. Cách làm truyền thống, trước khi jadx phổ biến.</p></div>
+        <div class="tool-card" data-platform="cross"><h4>MobSF <span class="tool-plat">Đa nền tảng</span></h4><p>Tự động hoá cả static &amp; dynamic analysis cho APK/IPA, sinh báo cáo nhanh gồm permission, quét hardcoded secret cơ bản, phát hiện lỗi Manifest phổ biến — tốt để có bức tranh tổng quan trước khi đào sâu thủ công.</p></div>
+        <div class="tool-card" data-platform="cross"><h4>Ghidra <span class="tool-plat">Đa nền tảng</span></h4><p>Reverse engineering binary/native library (<span class="kw-dark">.so</span> của Android, Mach-O của iOS) ở mức assembly — cần khi logic nhạy cảm bị đẩy xuống native code.</p></div>
+        <div class="tool-card" data-platform="android"><h4>Androguard <span class="tool-plat">Android</span></h4><p>Thư viện/CLI Python để phân tích APK theo hướng lập trình — script hoá việc trích Manifest, permission, hoặc tìm pattern hàng loạt qua nhiều file APK cùng lúc.</p></div>
+        <div class="tool-card" data-platform="android"><h4>apkleaks <span class="tool-plat">Android</span></h4><p>Quét tự động URL/API key/secret theo pattern phổ biến trong APK đã giải nén — tăng tốc đáng kể bước "săn bí mật" ở Hồ sơ 04.</p></div>
+        <div class="tool-card" data-platform="cross"><h4>TruffleHog <span class="tool-plat">Đa nền tảng</span></h4><p>Quét secret theo entropy &amp; regex pattern, dùng được trên source code đã decompile hoặc cả lịch sử git nếu có.</p></div>
+        <div class="tool-card" data-platform="ios"><h4>class-dump <span class="tool-plat">iOS</span></h4><p>Trích xuất thông tin class/method Objective-C từ binary Mach-O — vai trò gần giống jadx bên Android, nhưng hạn chế nhiều với code Swift thuần.</p></div>
+        <div class="tool-card" data-platform="ios"><h4>plutil <span class="tool-plat">iOS</span></h4><p>Đọc/convert file <span class="kw-dark">Info.plist</span> (thường ở dạng binary plist) sang XML để review permission usage description, URL scheme, cấu hình ATS.</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== TAB 8 — CHECKLIST ===================== -->
+    <section class="tab-panel" id="tab-8" role="tabpanel" aria-labelledby="tabbtn-8">
+      <div class="eyebrow">Hồ sơ 08 · Wrap-up</div>
+      <h2 class="h-display">Checklist tổng kết</h2>
+      <p class="lede">Tick lại những gì bạn đã nắm được qua toàn bộ hồ sơ này. Đây là bản rút gọn — không thay thế cho một checklist chuẩn hoá đầy đủ như OWASP MASTG.</p>
+
+      <div class="progress-wrap">
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+          <span style="font-family:var(--font-mono); font-size:13px; color:var(--text-on-ink-dim);">Mức độ hoàn thành hồ sơ</span>
+          <span style="font-family:var(--font-mono); font-size:15px; color:var(--amber);" id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div>
+      </div>
+
+      <div id="checklistWrap"></div>
+
+      <div class="btn-row">
+        <button class="btn-ghost" id="checklistResetBtn" type="button">Đặt lại checklist</button>
+      </div>
+
+      <div class="panel" style="margin-top:30px;">
+        <div class="panel-clip"></div>
+        <h3>Static Analysis chỉ là điểm khởi đầu</h3>
+        <p>Luôn kết hợp thêm <span class="kw">Dynamic Analysis</span> (Frida, Objection, Burp Suite/mitmproxy) để xác thực lại các finding trong môi trường chạy thực tế — nhiều lỗ hổng chỉ lộ rõ khi app thực sự hoạt động. Muốn có checklist đầy đủ, chuẩn hoá và cập nhật hơn, tham khảo thêm <span class="kw">OWASP MASTG</span> (Mobile Application Security Testing Guide) và <span class="kw">OWASP MASVS</span> (Mobile Application Security Verification Standard).</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= Tab switching ================= */
+  var tabButtons = document.querySelectorAll(".tab-btn");
+  var tabPanels = document.querySelectorAll(".tab-panel");
+  function switchTab(id){
+    tabButtons.forEach(function(b){
+      var active = b.getAttribute("data-tab") === String(id);
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    tabPanels.forEach(function(p){
+      p.classList.toggle("active", p.id === "tab-" + id);
+    });
+    var main = document.querySelector(".main");
+    if (main) { main.scrollTop = 0; }
+  }
+  tabButtons.forEach(function(b){
+    b.addEventListener("click", function(){ switchTab(b.getAttribute("data-tab")); });
+  });
+
+  /* ================= Tab 0: static/dynamic toggle ================= */
+  var modeButtons = document.querySelectorAll(".toggle-btn[data-mode]");
+  modeButtons.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var mode = btn.getAttribute("data-mode");
+      modeButtons.forEach(function(b){ b.classList.toggle("active", b === btn); });
+      document.getElementById("mode-static").classList.toggle("active", mode === "static");
+      document.getElementById("mode-dynamic").classList.toggle("active", mode === "dynamic");
+    });
+  });
+
+  /* ================= Tab 0: evidence bag hero ================= */
+  var heroWrap = document.getElementById("heroInteractive");
+  var heroOpenBtn = document.getElementById("heroOpenBtn");
+  var heroCaption = document.getElementById("heroCaption");
+  heroOpenBtn.addEventListener("click", function(){
+    heroWrap.classList.add("opened");
+    heroCaption.textContent = "Niêm phong đã mở — bên trong là một ZIP archive.";
+    heroOpenBtn.disabled = true;
+    heroOpenBtn.style.opacity = "0.6";
+  });
+  document.getElementById("heroCtaBtn").addEventListener("click", function(){
+    switchTab("1");
+  });
+
+  /* ================= Tab 1: tree view toggle ================= */
+  var viewButtons = document.querySelectorAll(".view-btn");
+  viewButtons.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var view = btn.getAttribute("data-view");
+      viewButtons.forEach(function(b){ b.classList.toggle("active", b === btn); });
+      document.getElementById("treeApk").classList.toggle("active", view === "apk");
+      document.getElementById("treeIpa").classList.toggle("active", view === "ipa");
+    });
+  });
+
+  /* ================= Tab 1: tree node -> detail ================= */
+  var treeNodes = document.querySelectorAll(".tree-node");
+  var treeDetails = document.querySelectorAll(".tree-detail");
+  treeNodes.forEach(function(node){
+    node.addEventListener("click", function(){
+      var target = node.getAttribute("data-target");
+      treeNodes.forEach(function(n){ n.classList.toggle("selected", n === node); });
+      treeDetails.forEach(function(d){ d.classList.toggle("active", d.id === "detail-" + target); });
+    });
+  });
+
+  /* ================= Tab 2: workflow steps + terminal ================= */
+  var STEP_TERM = {
+    "1": "$ adb shell pm path com.novabank.mobile\npackage:/data/app/~~AbC123==/com.novabank.mobile-XyZ/base.apk\n\n$ adb pull /data/app/~~AbC123==/com.novabank.mobile-XyZ/base.apk NovaBank.apk\n1 file pulled. 41.2 MB/s (58234011 bytes in 1.348s)",
+    "2": "$ unzip -o NovaBank.apk -d extracted/\nArchive:  NovaBank.apk\n  inflating: extracted/AndroidManifest.xml\n  inflating: extracted/classes.dex\n  inflating: extracted/classes2.dex\n  inflating: extracted/resources.arsc\n   creating: extracted/res/\n   creating: extracted/assets/\n   creating: extracted/lib/\n   creating: extracted/META-INF/",
+    "3": "$ jadx -d out/ NovaBank.apk\nINFO  jadx - loading ...\nINFO  jadx - processing ...\nINFO  jadx - done, 3421 classes decompiled\nINFO  jadx - sources saved to: out/sources/com/novabank/mobile/\n\n# Cách khác, khi cần rebuild lại app:\n$ apktool d NovaBank.apk -o decoded/\nI: Baksmaling classes.dex...\nI: Loading resource table...\nI: Decoding AndroidManifest.xml...\nI: Done.",
+    "5": "$ grep -R -inE \"(api[_-]?key|secret|password|token)\" out/sources/ | head -5\nout/sources/.../ApiClient.java:41:    private static final String API_KEY = \"AIzaSyD4rP9xample...\";\nout/sources/.../AuthRepo.java:88:    prefs.putString(\"access_token\", token);\nout/sources/.../Config.java:12:    static final String DB_PASSWORD = \"Tr0ng_Bank_2024!\";",
+    "6": "$ cat res/xml/network_security_config.xml\n<network-security-config>\n    <domain-config cleartextTrafficPermitted=\"true\">\n        <domain includeSubdomains=\"true\">legacy-api.novabank.vn</domain>\n    </domain-config>\n</network-security-config>"
+  };
+  var stepButtons = document.querySelectorAll(".step-btn");
+  var stepDetails = document.querySelectorAll(".step-detail");
+  var termWrap = document.getElementById("stepTermWrap");
+  var termOutput = document.getElementById("stepTermOutput");
+  var termNote = document.getElementById("stepTermNote");
+  var typeTimer = null;
+
+  function typeWriter(text){
+    clearInterval(typeTimer);
+    termOutput.textContent = "";
+    var i = 0;
+    typeTimer = setInterval(function(){
+      termOutput.textContent = text.slice(0, i + 1);
+      i += 2;
+      if (i >= text.length){
+        termOutput.textContent = text;
+        clearInterval(typeTimer);
+      }
+    }, 8);
+  }
+
+  function activateStep(stepNum){
+    stepButtons.forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-step") === stepNum); });
+    stepDetails.forEach(function(d){ d.classList.toggle("active", d.getAttribute("data-stepdetail") === stepNum); });
+    if (STEP_TERM[stepNum]) {
+      termWrap.style.display = "block";
+      termNote.textContent = "";
+      typeWriter(STEP_TERM[stepNum]);
+    } else {
+      clearInterval(typeTimer);
+      termOutput.textContent = "";
+      termWrap.style.display = "none";
+      termNote.textContent = "Bước này không có lệnh cụ thể — xem mô tả phía trên.";
+    }
+  }
+  stepButtons.forEach(function(btn){
+    btn.addEventListener("click", function(){ activateStep(btn.getAttribute("data-step")); });
+  });
+  activateStep("1");
+
+  /* ================= Tab 3: manifest line click ================= */
+  var mLines = document.querySelectorAll(".mline");
+  var mDetails = document.querySelectorAll(".m-detail");
+  var reviewedSet = new Set();
+  var mProgressCount = document.getElementById("mProgressCount");
+  mLines.forEach(function(line){
+    line.addEventListener("click", function(){
+      var target = line.getAttribute("data-target");
+      mLines.forEach(function(l){ l.classList.toggle("selected", l === line); });
+      mDetails.forEach(function(d){ d.classList.toggle("active", d.id === "mdetail-" + target); });
+      if (!reviewedSet.has(target)){
+        reviewedSet.add(target);
+        mProgressCount.textContent = String(reviewedSet.size);
+      }
+      document.querySelectorAll('.mline[data-target="' + target + '"]').forEach(function(l){
+        l.classList.add("reviewed");
+      });
+    });
+  });
+
+  /* ================= Tab 4: secret hunting ================= */
+  var SECRET_LINES = [
+    { text: "NovaBank v3.4.1 — Đăng nhập an toàn cùng NovaBank", secret: false, explain: "Chuỗi UI thông thường — không phải bí mật." },
+    { text: "com.novabank.mobile.ui.LoginActivity", secret: false, explain: "Tên class — thông tin cấu trúc app, không phải bí mật." },
+    { text: "Vui lòng nhập mã OTP đã gửi tới số điện thoại của bạn", secret: false, explain: "Chuỗi hiển thị cho người dùng, không nhạy cảm." },
+    { text: "android.permission.INTERNET", secret: false, explain: "Tên permission chuẩn của Android, công khai." },
+    { text: "AKIAIOSFODNN7EXAMPLE", secret: true, explain: "Đây là dạng AWS Access Key ID — luôn bắt đầu bằng \"AKIA\" và dài 20 ký tự. Nếu leak, ai cũng có thể dùng để gọi AWS API dưới quyền của key này." },
+    { text: "https://api.novabank.vn/v2/accounts", secret: false, explain: "URL endpoint — hữu ích để biết app gọi đâu, nhưng bản thân URL không phải bí mật." },
+    { text: "-----BEGIN RSA PRIVATE KEY-----", secret: true, explain: "Header chuẩn của 1 file private key định dạng PEM. Nếu private key thật bị đóng gói nhầm vào app, đây là mức Critical — có thể dùng để giả mạo danh tính hoặc giải mã dữ liệu đã mã hoá bằng key tương ứng." },
+    { text: "OkHttp/4.9.0", secret: false, explain: "Chỉ là chuỗi User-Agent của thư viện HTTP client — không phải bí mật, dù trông có vẻ \"kỹ thuật\"." },
+    { text: "db_password_prod=Tr0ng_Bank_2024!", secret: true, explain: "Mật khẩu database production bị hardcode thẳng trong code — mức Critical, có thể dẫn tới truy cập trái phép toàn bộ database." },
+    { text: "Không thể kết nối tới máy chủ, vui lòng thử lại sau", secret: false, explain: "Thông báo lỗi hiển thị cho người dùng, không nhạy cảm." },
+    { text: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9", secret: true, explain: "Đây là phần header của 1 JWT (base64 của {\"alg\":\"HS256\",\"typ\":\"JWT\"}). Một JWT đầy đủ bị hardcode trong code thường là token mẫu/test dùng để bypass xác thực — luôn đáng ngờ khi thấy trong static analysis." },
+    { text: "com.novabank.mobile.BuildConfig", secret: false, explain: "Tên class tự sinh bởi Android Gradle Plugin — không phải bí mật, dù đây là nơi hay chứa flag DEBUG/RELEASE." },
+    { text: "https://hooks.slack.com/services/T000000/B000000/XXXXXXXXXXXXXXXXXXXXXXXX", secret: true, explain: "Đúng định dạng Slack Incoming Webhook URL. Nếu là URL thật, bất kỳ ai có URL này đều có thể gửi message vào channel Slack nội bộ của tổ chức." },
+    { text: "Xin chào, {username}!", secret: false, explain: "Chuỗi template hiển thị UI, không nhạy cảm." },
+    { text: "AIzaSyD-9tSampleFirebaseKeyPlaceholder1", secret: true, explain: "Tiền tố \"AIza\" là dấu hiệu đặc trưng của Google API Key (thường dùng cho Firebase/Maps). Cần xác minh thêm phạm vi quyền của key này trước khi kết luận mức độ nghiêm trọng." },
+    { text: "res/layout/activity_main.xml", secret: false, explain: "Đường dẫn resource nội bộ, không phải bí mật." },
+    { text: "v2.4.9-release-build.220", secret: false, explain: "Chuỗi version build, không nhạy cảm." },
+    { text: "android.intent.action.MAIN", secret: false, explain: "Hằng số Intent action chuẩn của Android, hoàn toàn công khai." }
+  ];
+  var secretConsole = document.getElementById("secretConsole");
+  SECRET_LINES.forEach(function(item, idx){
+    var row = document.createElement("div");
+    row.className = "secret-line";
+    row.setAttribute("data-secret", item.secret ? "true" : "false");
+    row.setAttribute("data-idx", String(idx));
+
+    var mark = document.createElement("span");
+    mark.className = "mark";
+
+    var body = document.createElement("div");
+    body.style.flex = "1";
+
+    var textSpan = document.createElement("div");
+    textSpan.className = "line-text";
+    textSpan.textContent = item.text;
+
+    var explain = document.createElement("div");
+    explain.className = "line-explain";
+    explain.hidden = true;
+    explain.textContent = item.explain;
+
+    body.appendChild(textSpan);
+    body.appendChild(explain);
+    row.appendChild(mark);
+    row.appendChild(body);
+    secretConsole.appendChild(row);
+
+    row.addEventListener("click", function(){
+      if (row.classList.contains("checked")) { return; }
+      row.classList.toggle("flagged");
+    });
+  });
+
+  document.getElementById("secretCheckBtn").addEventListener("click", function(){
+    var rows = secretConsole.querySelectorAll(".secret-line");
+    var correctCatches = 0, totalSecrets = 0, falseAlarms = 0;
+    rows.forEach(function(row){
+      var isSecret = row.getAttribute("data-secret") === "true";
+      var flagged = row.classList.contains("flagged");
+      if (isSecret) { totalSecrets++; }
+      row.classList.remove("result-correct", "result-missed", "result-false-alarm");
+      row.classList.add("checked");
+      if (isSecret && flagged){ row.classList.add("result-correct"); correctCatches++; }
+      else if (isSecret && !flagged){ row.classList.add("result-missed"); }
+      else if (!isSecret && flagged){ row.classList.add("result-false-alarm"); falseAlarms++; }
+      var explain = row.querySelector(".line-explain");
+      if (explain) { explain.hidden = false; }
+    });
+    var scoreEl = document.getElementById("secretScore");
+    scoreEl.textContent = "Bạn phát hiện đúng " + correctCatches + "/" + totalSecrets + " bí mật thật, với " + falseAlarms + " báo động giả.";
+  });
+
+  document.getElementById("secretResetBtn").addEventListener("click", function(){
+    var rows = secretConsole.querySelectorAll(".secret-line");
+    rows.forEach(function(row){
+      row.classList.remove("flagged", "checked", "result-correct", "result-missed", "result-false-alarm");
+      var explain = row.querySelector(".line-explain");
+      if (explain) { explain.hidden = true; }
+    });
+    document.getElementById("secretScore").textContent = "";
+  });
+
+  /* ================= Tab 6: quiz ================= */
+  var quizQuestions = document.querySelectorAll(".quiz-question");
+  var quizSummary = document.getElementById("quizSummary");
+  var quizScore = 0;
+  var quizIndex = 0;
+
+  quizQuestions.forEach(function(q){
+    var opts = q.querySelectorAll(".quiz-opt");
+    var explain = q.querySelector(".quiz-explain");
+    var nextBtn = q.querySelector(".quiz-next");
+    opts.forEach(function(opt){
+      opt.addEventListener("click", function(){
+        if (q.classList.contains("answered")) { return; }
+        q.classList.add("answered");
+        var isCorrect = opt.getAttribute("data-correct") === "true";
+        if (isCorrect) {
+          opt.classList.add("correct");
+          quizScore++;
+        } else {
+          opt.classList.add("wrong");
+          opts.forEach(function(o){ if (o.getAttribute("data-correct") === "true") { o.classList.add("correct"); } });
+        }
+        explain.classList.add("show");
+        nextBtn.classList.add("show");
+      });
+    });
+    nextBtn.addEventListener("click", function(){
+      quizIndex++;
+      showQuizQuestion(quizIndex);
+    });
+  });
+
+  function showQuizQuestion(idx){
+    if (idx >= quizQuestions.length){
+      quizQuestions.forEach(function(q){ q.classList.remove("active"); });
+      quizSummary.classList.add("active");
+      document.getElementById("quizScoreNum").textContent = String(quizScore);
+      return;
+    }
+    quizQuestions.forEach(function(q){
+      q.classList.toggle("active", Number(q.getAttribute("data-qindex")) === idx);
+    });
+  }
+
+  document.getElementById("quizRetryBtn").addEventListener("click", function(){
+    quizScore = 0;
+    quizIndex = 0;
+    quizQuestions.forEach(function(q){
+      q.classList.remove("answered");
+      q.querySelectorAll(".quiz-opt").forEach(function(o){ o.classList.remove("correct", "wrong"); });
+      var explain = q.querySelector(".quiz-explain");
+      var nextBtn = q.querySelector(".quiz-next");
+      if (explain) { explain.classList.remove("show"); }
+      if (nextBtn) { nextBtn.classList.remove("show"); }
+    });
+    quizSummary.classList.remove("active");
+    showQuizQuestion(0);
+  });
+
+  /* ================= Tab 7: tools filter ================= */
+  var filterButtons = document.querySelectorAll("#toolFilterRow button");
+  var toolCards = document.querySelectorAll(".tool-card");
+  filterButtons.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      filterButtons.forEach(function(b){ b.classList.toggle("active-filter", b === btn); });
+      var filter = btn.getAttribute("data-filter");
+      toolCards.forEach(function(card){
+        var show = (filter === "all") || (card.getAttribute("data-platform") === filter);
+        card.style.display = show ? "" : "none";
+      });
+    });
+  });
+
+  /* ================= Tab 8: checklist ================= */
+  var CHECKLIST = [
+    { group: "File & Chữ ký", items: [
+      "Đã kiểm tra chữ ký (META-INF/ hoặc _CodeSignature/) để biết app debug-signed hay release-signed",
+      "Đã đối chiếu hash của file .apk/.ipa với bản build cần test"
+    ]},
+    { group: "Manifest / Info.plist", items: [
+      "Đã kiểm tra android:debuggable, allowBackup, usesCleartextTraffic",
+      "Đã rà soát toàn bộ permission và đối chiếu với chức năng thực tế",
+      "Đã kiểm tra các component exported (Activity/Service/Receiver/Provider)",
+      "Đã đọc file network_security_config.xml / cấu hình ATS trong Info.plist"
+    ]},
+    { group: "Code Review", items: [
+      "Đã decompile toàn bộ classes*.dex hoặc trích xuất class Objective-C/Swift",
+      "Đã grep hardcoded secret theo pattern phổ biến (AKIA, AIza, sk_live_, BEGIN...KEY...)",
+      "Đã kiểm tra cấu hình WebView (JavaScript interface, load URL động)",
+      "Đã đánh giá mức độ obfuscation (R8/ProGuard) của bản release"
+    ]},
+    { group: "Data & Crypto", items: [
+      "Đã kiểm tra nơi lưu token/session (SharedPreferences, database nội bộ)",
+      "Đã rà soát các lệnh gọi Cipher/MessageDigest tìm thuật toán yếu (ECB, MD5, SHA1)"
+    ]},
+    { group: "Network", items: [
+      "Đã tìm custom TrustManager/HostnameVerifier bỏ qua việc verify certificate",
+      "Đã xác nhận toàn bộ endpoint dùng HTTPS, không còn cleartext domain nào"
+    ]},
+    { group: "Tổng hợp", items: [
+      "Đã viết finding kèm severity, bằng chứng cụ thể và khuyến nghị khắc phục"
+    ]}
+  ];
+  var checklistWrap = document.getElementById("checklistWrap");
+  var totalItems = 0;
+  CHECKLIST.forEach(function(group, gi){
+    var groupDiv = document.createElement("div");
+    groupDiv.className = "checklist-group";
+    var h4 = document.createElement("h4");
+    h4.textContent = group.group;
+    groupDiv.appendChild(h4);
+    group.items.forEach(function(itemText, ii){
+      totalItems++;
+      var row = document.createElement("label");
+      row.className = "checklist-item";
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.id = "chk-" + gi + "-" + ii;
+      var span = document.createElement("span");
+      span.textContent = itemText;
+      row.appendChild(cb);
+      row.appendChild(span);
+      groupDiv.appendChild(row);
+      cb.addEventListener("change", function(){
+        row.classList.toggle("checked", cb.checked);
+        updateProgress();
+      });
+    });
+    checklistWrap.appendChild(groupDiv);
+  });
+
+  function updateProgress(){
+    var checked = checklistWrap.querySelectorAll("input[type=checkbox]:checked").length;
+    var pct = totalItems ? Math.round((checked / totalItems) * 100) : 0;
+    document.getElementById("progressFill").style.width = pct + "%";
+    document.getElementById("progressPct").textContent = pct + "%";
+  }
+
+  document.getElementById("checklistResetBtn").addEventListener("click", function(){
+    checklistWrap.querySelectorAll("input[type=checkbox]").forEach(function(cb){
+      cb.checked = false;
+      cb.closest(".checklist-item").classList.remove("checked");
+    });
+    updateProgress();
+  });
+
+  updateProgress();
+
+})();
+</script>
+</body>
+</html>
