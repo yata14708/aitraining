@@ -1,0 +1,2532 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nhập môn Neural Network · AI Security Buổi 01</title>
+<meta name="description" content="Bài giảng tương tác nhập môn Neural Network — nền tảng cho khoá học AI Security.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root{
+  --bg:            #0A1220;
+  --bg-alt:        #070D18;
+  --panel:         #101A2E;
+  --panel-2:       #0D1626;
+  --panel-raised:  #142140;
+  --border:        #1E2C46;
+  --border-soft:   #16223a;
+  --grid-line:     rgba(126,158,214,0.07);
+
+  --text:          #E8EDF6;
+  --text-dim:      #92A0BC;
+  --text-faint:    #56637F;
+
+  --signal:        #4FD6C4;   /* teal-cyan : positive weight / active signal */
+  --signal-soft:   rgba(79,214,196,0.14);
+  --signal-line:   rgba(79,214,196,0.55);
+
+  --warn:          #F0A84E;   /* amber : weights / attention / class A */
+  --warn-soft:     rgba(240,168,78,0.14);
+
+  --neg:           #E8637E;   /* rose : negative weight / class B */
+  --neg-soft:      rgba(232,99,126,0.14);
+
+  --violet:        #9B8CF2;   /* tertiary accent : hidden layer / secondary data */
+  --violet-soft:   rgba(155,140,242,0.14);
+
+  --font-display: 'Space Grotesk', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-body:    'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  --sidebar-w: 288px;
+}
+
+*, *::before, *::after{ box-sizing:border-box; }
+
+html{ scroll-behavior:smooth; }
+
+body{
+  margin:0;
+  background:
+    radial-gradient(ellipse 900px 500px at 85% -10%, rgba(79,214,196,0.06), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 0% 100%, rgba(155,140,242,0.05), transparent 60%),
+    var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:15px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+::selection{ background:var(--signal-soft); color:var(--text); }
+
+a{ color:var(--signal); }
+
+/* Scrollbars */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:var(--border); border-radius:8px; }
+::-webkit-scrollbar-thumb:hover{ background:var(--text-faint); }
+
+/* ============================================================
+   LAYOUT SHELL
+   ============================================================ */
+.app{
+  display:grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  min-height:100vh;
+}
+
+/* ---- Sidebar ---- */
+.sidebar{
+  position:sticky;
+  top:0;
+  height:100vh;
+  overflow-y:auto;
+  background:linear-gradient(180deg, var(--bg-alt), var(--panel-2));
+  border-right:1px solid var(--border);
+  padding:24px 16px 32px;
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+}
+
+.brand{
+  padding:4px 10px 14px;
+  border-bottom:1px solid var(--border-soft);
+}
+.brand-eyebrow{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:.14em;
+  color:var(--signal);
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.brand-eyebrow .dot{
+  width:6px; height:6px; border-radius:50%;
+  background:var(--signal);
+  box-shadow:0 0 8px 1px var(--signal);
+  animation:pulse-dot 2.4s ease-in-out infinite;
+}
+@keyframes pulse-dot{
+  0%,100%{ opacity:1; }
+  50%{ opacity:.35; }
+}
+.brand h1{
+  font-family:var(--font-display);
+  font-size:19px;
+  font-weight:600;
+  margin:8px 0 4px;
+  letter-spacing:-0.01em;
+}
+.brand p{
+  margin:0;
+  font-size:12.5px;
+  color:var(--text-faint);
+}
+
+.nav-list{
+  list-style:none;
+  margin:0; padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.nav-item{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  width:100%;
+  text-align:left;
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:var(--radius-md);
+  padding:10px 11px;
+  cursor:pointer;
+  color:var(--text-dim);
+  transition:background .15s ease, border-color .15s ease, color .15s ease;
+  font-family:var(--font-body);
+}
+.nav-item:hover{
+  background:var(--panel);
+  border-color:var(--border-soft);
+  color:var(--text);
+}
+.nav-item.active{
+  background:var(--panel-raised);
+  border-color:var(--border);
+  color:var(--text);
+}
+.nav-num{
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--text-faint);
+  padding-top:2px;
+  min-width:20px;
+}
+.nav-item.active .nav-num{ color:var(--signal); }
+.nav-txt-vi{
+  font-size:13.5px;
+  font-weight:600;
+  line-height:1.35;
+  color:inherit;
+}
+.nav-txt-en{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  color:var(--text-faint);
+  margin-top:2px;
+  letter-spacing:.02em;
+}
+
+.sidebar-foot{
+  margin-top:auto;
+  padding:12px 10px 0;
+  border-top:1px solid var(--border-soft);
+  font-size:11.5px;
+  color:var(--text-faint);
+  font-family:var(--font-mono);
+  line-height:1.6;
+}
+
+/* ---- Main ---- */
+.main{
+  min-width:0;
+  padding:40px 48px 96px;
+}
+.tab-panel{ display:none; animation:fade-in .35s ease; }
+.tab-panel.active{ display:block; }
+@keyframes fade-in{
+  from{ opacity:0; transform:translateY(6px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+.module-head{
+  margin-bottom:28px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--border-soft);
+}
+.module-eyebrow{
+  font-family:var(--font-mono);
+  font-size:12px;
+  color:var(--text-faint);
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.module-eyebrow .num{
+  color:var(--signal);
+  font-weight:600;
+}
+.module-head h2{
+  font-family:var(--font-display);
+  font-size:30px;
+  font-weight:600;
+  margin:0 0 6px;
+  letter-spacing:-0.01em;
+}
+.module-head h2 .en{
+  color:var(--text-faint);
+  font-size:16px;
+  font-weight:500;
+  font-family:var(--font-mono);
+  margin-left:10px;
+}
+.module-dek{
+  margin:0;
+  color:var(--text-dim);
+  font-size:15px;
+  max-width:64ch;
+}
+
+/* ============================================================
+   COMPONENTS
+   ============================================================ */
+
+/* Panel / card */
+.panel{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:22px;
+}
+.panel + .panel{ margin-top:18px; }
+
+.grid-2{
+  display:grid;
+  grid-template-columns: 1.05fr .95fr;
+  gap:18px;
+  align-items:start;
+}
+.grid-2.reverse{ grid-template-columns: .95fr 1.05fr; }
+
+.section-label{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--text-faint);
+  margin:0 0 12px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.section-label::after{
+  content:'';
+  flex:1;
+  height:1px;
+  background:var(--border-soft);
+}
+
+/* Scope / instrument surface for canvases */
+.scope{
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0/28px 28px,
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0/28px 28px,
+    var(--panel-2);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  position:relative;
+  overflow:hidden;
+}
+
+/* Prose */
+.prose p{ margin:0 0 12px; color:var(--text-dim); font-size:14.5px; }
+.prose p:last-child{ margin-bottom:0; }
+.prose strong{ color:var(--text); font-weight:600; }
+.prose ul{ margin:0 0 12px; padding-left:20px; color:var(--text-dim); font-size:14.5px; }
+.prose li{ margin-bottom:6px; }
+.prose li::marker{ color:var(--signal); }
+.kw{
+  font-family:var(--font-mono);
+  font-size:.92em;
+  color:var(--signal);
+  background:var(--signal-soft);
+  padding:1px 6px;
+  border-radius:4px;
+  white-space:nowrap;
+}
+.kw.warn{ color:var(--warn); background:var(--warn-soft); }
+.kw.neg{ color:var(--neg); background:var(--neg-soft); }
+
+/* Security callout */
+.callout{
+  border:1px solid var(--border);
+  border-left:3px solid var(--warn);
+  background:var(--warn-soft);
+  border-radius:0 var(--radius-md) var(--radius-md) 0;
+  padding:14px 16px;
+  margin-top:16px;
+  display:flex;
+  gap:12px;
+}
+.callout .icon{ font-size:17px; line-height:1.4; flex-shrink:0; }
+.callout .body{ font-size:13.5px; color:var(--text-dim); }
+.callout .body strong{ color:var(--text); }
+.callout .title{
+  font-family:var(--font-mono);
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--warn);
+  margin-bottom:4px;
+  font-weight:700;
+}
+
+/* Buttons */
+.btn{
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:13.5px;
+  color:var(--text);
+  background:var(--panel-raised);
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  padding:9px 16px;
+  cursor:pointer;
+  transition:border-color .15s ease, background .15s ease, transform .1s ease;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.btn:hover{ border-color:var(--signal); background:#16233d; }
+.btn:active{ transform:translateY(1px); }
+.btn:disabled{ opacity:.4; cursor:not-allowed; }
+.btn.primary{
+  background:var(--signal);
+  border-color:var(--signal);
+  color:#04211D;
+}
+.btn.primary:hover{ background:#65e2d1; }
+.btn.ghost{ background:transparent; }
+.btn.small{ padding:6px 11px; font-size:12.5px; }
+.btn-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+.chip-row{ display:flex; gap:8px; flex-wrap:wrap; }
+.chip{
+  font-family:var(--font-mono);
+  font-size:12.5px;
+  padding:7px 13px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  background:var(--panel-2);
+  color:var(--text-dim);
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.chip:hover{ border-color:var(--text-faint); color:var(--text); }
+.chip.active{
+  border-color:var(--signal);
+  background:var(--signal-soft);
+  color:var(--signal);
+}
+
+/* Sliders */
+.field{ margin-bottom:16px; }
+.field:last-child{ margin-bottom:0; }
+.field-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:8px;
+}
+.field-label{ font-size:13px; color:var(--text-dim); }
+.field-label .en{ color:var(--text-faint); font-family:var(--font-mono); font-size:11px; }
+.field-value{
+  font-family:var(--font-mono);
+  font-size:13px;
+  font-weight:600;
+  color:var(--signal);
+  min-width:44px;
+  text-align:right;
+}
+.field-value.warn{ color:var(--warn); }
+.field-value.neg{ color:var(--neg); }
+
+input[type="range"]{
+  -webkit-appearance:none;
+  appearance:none;
+  width:100%;
+  height:4px;
+  border-radius:2px;
+  background:var(--border);
+  outline:none;
+  cursor:pointer;
+}
+input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:16px; height:16px;
+  border-radius:50%;
+  background:var(--signal);
+  border:2px solid #04211D;
+  box-shadow:0 0 0 3px rgba(79,214,196,0.2);
+  cursor:pointer;
+  margin-top:-6px;
+}
+input[type="range"]::-moz-range-thumb{
+  width:14px; height:14px;
+  border-radius:50%;
+  background:var(--signal);
+  border:2px solid #04211D;
+  cursor:pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track{
+  height:4px; border-radius:2px; background:var(--border);
+}
+
+/* Readout strip */
+.readouts{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(90px,1fr));
+  gap:10px;
+  margin-top:16px;
+}
+.readout{
+  background:var(--panel-2);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm);
+  padding:9px 12px;
+}
+.readout .k{
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  color:var(--text-faint);
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.readout .v{
+  font-family:var(--font-mono);
+  font-size:17px;
+  font-weight:600;
+  color:var(--text);
+  margin-top:2px;
+}
+.readout .v.signal{ color:var(--signal); }
+.readout .v.warn{ color:var(--warn); }
+.readout .v.neg{ color:var(--neg); }
+
+/* Bar gauge */
+.bar-gauge{
+  height:8px;
+  border-radius:4px;
+  background:var(--panel-2);
+  border:1px solid var(--border-soft);
+  overflow:hidden;
+  margin-top:6px;
+}
+.bar-gauge > i{
+  display:block;
+  height:100%;
+  background:var(--signal);
+  border-radius:4px;
+  transition:width .2s ease;
+}
+
+/* Legend */
+.legend{ display:flex; gap:16px; flex-wrap:wrap; font-size:12px; color:var(--text-dim); font-family:var(--font-mono); }
+.legend .sw{ display:inline-flex; align-items:center; gap:6px; }
+.legend .sw i{ width:10px; height:10px; border-radius:2px; display:inline-block; }
+
+/* Canvas base */
+canvas{ display:block; max-width:100%; }
+
+/* Diagram node/edge helpers (SVG) */
+.diagram-wrap{ width:100%; }
+.node-label{ font-family:var(--font-mono); font-size:10px; fill:var(--text-dim); }
+
+/* Footer nav (prev/next) */
+.tab-footnav{
+  display:flex;
+  justify-content:space-between;
+  margin-top:36px;
+  padding-top:20px;
+  border-top:1px solid var(--border-soft);
+}
+.foot-btn{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:10px 16px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  background:var(--panel);
+  cursor:pointer;
+  color:var(--text-dim);
+  transition:border-color .15s ease;
+  max-width:280px;
+}
+.foot-btn:hover{ border-color:var(--signal); color:var(--text); }
+.foot-btn.next{ text-align:right; align-items:flex-end; margin-left:auto; }
+.foot-btn .fk{ font-family:var(--font-mono); font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.08em; }
+.foot-btn .ft{ font-size:13.5px; font-weight:600; }
+
+/* Mobile top tab bar (hidden on desktop) */
+.mobile-tabbar{ display:none; }
+
+/* Responsive */
+@media (max-width: 980px){
+  .app{ grid-template-columns:1fr; }
+  .sidebar{ display:none; }
+  .mobile-tabbar{
+    display:flex;
+    gap:8px;
+    overflow-x:auto;
+    position:sticky; top:0; z-index:10;
+    padding:12px 16px;
+    background:var(--bg-alt);
+    border-bottom:1px solid var(--border);
+  }
+  .mobile-tabbar button{
+    flex-shrink:0;
+    font-family:var(--font-mono);
+    font-size:12px;
+    padding:8px 13px;
+    border-radius:20px;
+    border:1px solid var(--border);
+    background:var(--panel);
+    color:var(--text-dim);
+  }
+  .mobile-tabbar button.active{ border-color:var(--signal); color:var(--signal); background:var(--signal-soft); }
+  .main{ padding:24px 18px 72px; }
+  .grid-2, .grid-2.reverse{ grid-template-columns:1fr; }
+  .module-head h2{ font-size:24px; }
+  .module-head h2 .en{ display:block; margin-left:0; margin-top:4px; font-size:13px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; }
+}
+
+/* Focus visibility */
+button:focus-visible, input:focus-visible, [tabindex]:focus-visible{
+  outline:2px solid var(--signal);
+  outline-offset:2px;
+}
+
+/* Pixel painter (tab 7) */
+.pixel-grid{
+  display:grid;
+  grid-template-columns:repeat(8, 1fr);
+  gap:2px;
+  aspect-ratio:1/1;
+  width:100%;
+  max-width:320px;
+  background:var(--border);
+  padding:2px;
+  border-radius:var(--radius-sm);
+  touch-action:none;
+}
+.pixel-cell{
+  background:#0D1626;
+  aspect-ratio:1/1;
+  border-radius:1px;
+}
+
+/* Prob bars (tab 7) */
+.prob-row{
+  display:grid;
+  grid-template-columns:20px 1fr 42px;
+  align-items:center;
+  gap:10px;
+  margin-bottom:7px;
+  font-family:var(--font-mono);
+  font-size:12.5px;
+}
+.prob-row .digit{ color:var(--text-dim); text-align:center; }
+.prob-row.top .digit{ color:var(--signal); font-weight:700; }
+.prob-bar-track{ height:14px; background:var(--panel-2); border:1px solid var(--border-soft); border-radius:3px; overflow:hidden; }
+.prob-bar-fill{ height:100%; background:var(--text-faint); transition:width .15s ease; }
+.prob-row.top .prob-bar-fill{ background:var(--signal); }
+.prob-row .pct{ color:var(--text-faint); text-align:right; }
+.prob-row.top .pct{ color:var(--signal); font-weight:700; }
+
+.big-pred{
+  font-family:var(--font-display);
+  font-size:64px;
+  font-weight:700;
+  color:var(--signal);
+  text-shadow:0 0 24px rgba(79,214,196,0.35);
+  line-height:1;
+}
+
+/* ---- inline SVG neuron/network diagrams ---- */
+.nn-diagram{ width:100%; height:auto; overflow:visible; }
+.nn-diagram circle, .nn-diagram rect.node-rect{
+  fill:var(--panel-2); stroke:var(--border); stroke-width:1.5;
+  transition:fill .15s ease, stroke .15s ease;
+}
+.nn-diagram line{ stroke:var(--border); stroke-width:1.5; transition:stroke .15s ease, stroke-width .15s ease; }
+.node-txt{ font-family:var(--font-display); font-size:13px; fill:var(--text); pointer-events:none; }
+.node-txt.small{ font-size:10.5px; }
+.node-val{ font-family:var(--font-mono); font-size:10px; fill:var(--text-faint); pointer-events:none; }
+.edge-txt{ font-family:var(--font-mono); font-size:10.5px; fill:var(--text-dim); pointer-events:none; }
+
+/* scatter / boundary canvas wrapper */
+.scope-canvas{ width:100%; height:280px; }
+.scope-canvas.tall{ height:340px; }
+
+.score-pill{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:var(--font-mono); font-size:12.5px;
+  padding:6px 12px; border-radius:20px;
+  border:1px solid var(--border); background:var(--panel-2); color:var(--text-dim);
+}
+.score-pill b{ color:var(--signal); }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar" aria-label="Danh sách module">
+    <div class="brand">
+      <div class="brand-eyebrow"><span class="dot"></span> AI SECURITY · BUỔI 01</div>
+      <h1>Nhập môn Neural Network</h1>
+      <p>Nền tảng bắt buộc trước khi học tấn công &amp; phòng thủ hệ thống AI.</p>
+    </div>
+    <ul class="nav-list">
+      <li><button class="nav-item" data-tab="neuron"><span class="nav-num">01</span><span><span class="nav-txt-vi">Neuron nhân tạo</span><span class="nav-txt-en">Artificial Neuron</span></span></button></li>
+      <li><button class="nav-item" data-tab="activation"><span class="nav-num">02</span><span><span class="nav-txt-vi">Hàm kích hoạt</span><span class="nav-txt-en">Activation Function</span></span></button></li>
+      <li><button class="nav-item" data-tab="architecture"><span class="nav-num">03</span><span><span class="nav-txt-vi">Kiến trúc mạng nhiều lớp</span><span class="nav-txt-en">Network Architecture</span></span></button></li>
+      <li><button class="nav-item" data-tab="loss"><span class="nav-num">04</span><span><span class="nav-txt-vi">Hàm mất mát</span><span class="nav-txt-en">Loss Function</span></span></button></li>
+      <li><button class="nav-item" data-tab="gradient"><span class="nav-num">05</span><span><span class="nav-txt-vi">Lan truyền ngược</span><span class="nav-txt-en">Backpropagation &amp; Gradient Descent</span></span></button></li>
+      <li><button class="nav-item" data-tab="training"><span class="nav-num">06</span><span><span class="nav-txt-vi">Trực quan huấn luyện</span><span class="nav-txt-en">Training &amp; Decision Boundary</span></span></button></li>
+      <li><button class="nav-item" data-tab="mnist"><span class="nav-num">07</span><span><span class="nav-txt-vi">Ứng dụng: nhận diện chữ số</span><span class="nav-txt-en">MNIST Digit Recognition</span></span></button></li>
+    </ul>
+    <div class="sidebar-foot">
+      7 module · tương tác trực tiếp trên trình duyệt<br>
+      không cần cài đặt · không gửi dữ liệu đi đâu cả
+    </div>
+  </nav>
+
+  <div class="mobile-tabbar" aria-label="Danh sách module (mobile)">
+    <button data-tab="neuron" class="active">01 · Neuron</button>
+    <button data-tab="activation">02 · Activation</button>
+    <button data-tab="architecture">03 · Architecture</button>
+    <button data-tab="loss">04 · Loss</button>
+    <button data-tab="gradient">05 · Gradient</button>
+    <button data-tab="training">06 · Training</button>
+    <button data-tab="mnist">07 · MNIST</button>
+  </div>
+
+<main class="main">
+  <section class="tab-panel" id="panel-neuron">
+    <div class="module-head">
+      <div class="module-eyebrow"><span class="num">MODULE 01 / 07</span></div>
+      <h2>Neuron nhân tạo <span class="en">Artificial Neuron</span></h2>
+      <p class="module-dek">Mọi mạng neural, dù phức tạp đến đâu, đều được ghép từ hàng triệu bản sao của một khối tính toán rất đơn giản này.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <p class="section-label">Live diagram</p>
+        <svg class="nn-diagram" id="neuron-svg" viewBox="0 0 480 240" role="img" aria-label="Sơ đồ một neuron nhân tạo">
+          <line id="edge-w1" x1="71" y1="58" x2="208" y2="112"></line>
+          <line id="edge-w2" x1="71" y1="182" x2="208" y2="128"></line>
+          <line id="edge-b"  x1="67" y1="120" x2="208" y2="120" stroke-dasharray="3 3"></line>
+          <line x1="254" y1="120" x2="300" y2="120"></line>
+          <line x1="360" y1="120" x2="400" y2="120"></line>
+
+          <text id="lbl-w1" class="edge-txt" x="96" y="76"></text>
+          <text id="lbl-w2" class="edge-txt" x="96" y="168"></text>
+          <text id="lbl-b" class="edge-txt" x="96" y="112"></text>
+
+          <circle id="node-x1" cx="54" cy="56" r="17"></circle>
+          <text x="54" y="60" text-anchor="middle" class="node-txt">x₁</text>
+          <text id="val-x1-svg" x="54" y="86" text-anchor="middle" class="node-val"></text>
+
+          <circle id="node-x2" cx="54" cy="184" r="17"></circle>
+          <text x="54" y="188" text-anchor="middle" class="node-txt">x₂</text>
+          <text id="val-x2-svg" x="54" y="212" text-anchor="middle" class="node-val"></text>
+
+          <circle id="node-bias" cx="54" cy="120" r="12" stroke-dasharray="2 2"></circle>
+          <text x="54" y="124" text-anchor="middle" class="node-txt small">+1</text>
+
+          <circle id="node-sum" cx="230" cy="120" r="24"></circle>
+          <text x="230" y="126" text-anchor="middle" class="node-txt">Σ</text>
+          <text id="val-z-svg" x="230" y="160" text-anchor="middle" class="node-val"></text>
+
+          <rect class="node-rect" x="300" y="100" width="60" height="40" rx="8"></rect>
+          <text x="330" y="124" text-anchor="middle" class="node-txt small">f(z)</text>
+
+          <circle id="node-out" cx="420" cy="120" r="20"></circle>
+          <text x="420" y="125" text-anchor="middle" class="node-txt small">y</text>
+          <text id="val-y-svg" x="420" y="154" text-anchor="middle" class="node-val"></text>
+        </svg>
+
+        <div class="readouts">
+          <div class="readout"><div class="k">z = Σwx+b</div><div class="v" id="ro-z">0.00</div></div>
+          <div class="readout"><div class="k">y = sigmoid(z)</div><div class="v signal" id="ro-y">0.00</div></div>
+          <div class="readout"><div class="k">Quyết định</div><div class="v" id="ro-decision">—</div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel" style="margin-bottom:18px;">
+          <p class="section-label">Tham số điều khiển</p>
+          <div class="field">
+            <div class="field-top"><span class="field-label">Input <span class="en">x₁</span></span><span class="field-value" id="v-x1">1.0</span></div>
+            <input type="range" id="s-x1" min="-2" max="2" step="0.1" value="1.0">
+          </div>
+          <div class="field">
+            <div class="field-top"><span class="field-label">Input <span class="en">x₂</span></span><span class="field-value" id="v-x2">-0.5</span></div>
+            <input type="range" id="s-x2" min="-2" max="2" step="0.1" value="-0.5">
+          </div>
+          <div class="field">
+            <div class="field-top"><span class="field-label">Weight <span class="en">w₁</span></span><span class="field-value warn" id="v-w1">0.8</span></div>
+            <input type="range" id="s-w1" min="-2" max="2" step="0.1" value="0.8">
+          </div>
+          <div class="field">
+            <div class="field-top"><span class="field-label">Weight <span class="en">w₂</span></span><span class="field-value warn" id="v-w2">-0.6</span></div>
+            <input type="range" id="s-w2" min="-2" max="2" step="0.1" value="-0.6">
+          </div>
+          <div class="field">
+            <div class="field-top"><span class="field-label">Bias <span class="en">b</span></span><span class="field-value warn" id="v-b">0.1</span></div>
+            <input type="range" id="s-b" min="-2" max="2" step="0.1" value="0.1">
+          </div>
+        </div>
+
+        <div class="panel prose">
+          <p class="section-label">Cách đọc sơ đồ</p>
+          <ul>
+            <li>Mỗi <span class="kw">input</span> (x₁, x₂) được nhân với một <span class="kw warn">weight</span> tương ứng — weight thể hiện "mức độ quan trọng" của input đó.</li>
+            <li><span class="kw warn">Bias</span> (b) là một hằng số cộng thêm, giúp dịch chuyển đường phân loại mà không phụ thuộc vào input.</li>
+            <li>Tất cả được cộng lại thành tổng có trọng số <span class="kw">z = w₁x₁ + w₂x₂ + b</span>.</li>
+            <li>z đi qua một <span class="kw">activation function</span> f (ở đây dùng Sigmoid) để cho ra output y — chi tiết ở Module 02.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:18px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:4px;">
+        <p class="section-label" style="margin-bottom:0; flex:1;">Thử thách: phân loại tuyến tính · Linear separability</p>
+        <div class="btn-row">
+          <span class="score-pill">Phân loại đúng: <b id="score-text">0/8</b></span>
+          <button class="btn small" id="btn-new-points">🎲 Điểm mới</button>
+        </div>
+      </div>
+      <p class="prose" style="margin-bottom:14px;">Kéo lại 3 thanh trượt <b>w₁, w₂, b</b> ở trên để xoay và dịch chuyển đường phân loại, sao cho toàn bộ điểm 🟠 <span style="color:var(--warn)">Lớp A</span> nằm về một phía và điểm 🔴 <span style="color:var(--neg)">Lớp B</span> nằm phía còn lại. Đây chính xác là những gì một neuron làm được — và cũng là giới hạn của nó: <b>chỉ vẽ được một đường thẳng</b>.</p>
+      <div class="scope scope-canvas" id="scatter-wrap">
+        <canvas id="scatter-canvas"></canvas>
+      </div>
+      <div class="legend" style="margin-top:10px;">
+        <span class="sw"><i style="background:var(--warn)"></i> Lớp A (nhãn thật)</span>
+        <span class="sw"><i style="background:var(--neg)"></i> Lớp B (nhãn thật)</span>
+        <span class="sw"><i style="background:var(--signal)"></i> Đường phân loại hiện tại (w₁x₁+w₂x₂+b = 0)</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="icon">🔒</div>
+      <div class="body">
+        <div class="title">Kết nối với AI Security</div>
+        <strong>Weight = tài sản của mô hình.</strong> Trong tấn công <span class="kw neg">model extraction</span>, kẻ tấn công gửi hàng loạt input, quan sát output, rồi ước lượng ngược lại w và b — đánh cắp gần như nguyên vẹn một mô hình đã tốn hàng triệu đô để huấn luyện, chỉ qua một API công khai.
+      </div>
+    </div>
+
+    <div class="tab-footnav">
+      <span></span>
+      <button class="foot-btn next" data-goto="activation"><span class="fk">Tiếp theo · 02</span><span class="ft">Hàm kích hoạt (Activation Function) →</span></button>
+    </div>
+  </section>
+  <section class="tab-panel" id="panel-activation">
+    <div class="module-head">
+      <div class="module-eyebrow"><span class="num">MODULE 02 / 07</span></div>
+      <h2>Hàm kích hoạt <span class="en">Activation Function</span></h2>
+      <p class="module-dek">Nếu bỏ activation function, xếp bao nhiêu lớp neuron chồng lên nhau cũng chỉ tương đương một phép biến đổi tuyến tính duy nhất. Activation là thứ tạo ra khả năng học các ranh giới phức tạp, phi tuyến.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <p class="section-label">Chọn hàm</p>
+        <div class="chip-row" id="fn-chips">
+          <button class="chip active" data-fn="sigmoid">Sigmoid</button>
+          <button class="chip" data-fn="tanh">Tanh</button>
+          <button class="chip" data-fn="relu">ReLU</button>
+          <button class="chip" data-fn="step">Step</button>
+        </div>
+
+        <div class="scope scope-canvas" style="margin-top:16px;">
+          <canvas id="act-canvas"></canvas>
+        </div>
+
+        <div class="field" style="margin-top:16px;">
+          <div class="field-top"><span class="field-label">Input <span class="en">x</span></span><span class="field-value" id="v-act-x">0.0</span></div>
+          <input type="range" id="s-act-x" min="-5" max="5" step="0.1" value="0">
+        </div>
+
+        <div class="readouts">
+          <div class="readout"><div class="k" id="ro-fn-name">f(x) = sigmoid(x)</div><div class="v signal" id="ro-fn-val">0.500</div></div>
+        </div>
+      </div>
+
+      <div class="panel prose" id="fn-explainer">
+        <p class="section-label">Ghi chú</p>
+        <div id="fn-desc"></div>
+        <div class="callout" style="margin-top:16px;">
+          <div class="icon">🔒</div>
+          <div class="body">
+            <div class="title">Kết nối với AI Security</div>
+            <strong>Vanishing gradient &amp; gradient masking.</strong> Sigmoid/Tanh bão hòa (giá trị gần 0 hoặc 1) khiến đạo hàm gần bằng 0 — làm chậm việc học ở mạng sâu, nhưng cũng từng bị nhầm là một cơ chế "phòng thủ" chống adversarial attack. Thực tế nó chỉ che giấu gradient (<span class="kw neg">gradient masking</span>) chứ không loại bỏ được điểm yếu — kẻ tấn công vẫn vượt qua bằng kỹ thuật ước lượng gradient khác.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-footnav">
+      <button class="foot-btn" data-goto="neuron"><span class="fk">← Trước · 01</span><span class="ft">Neuron nhân tạo</span></button>
+      <button class="foot-btn next" data-goto="architecture"><span class="fk">Tiếp theo · 03</span><span class="ft">Kiến trúc mạng nhiều lớp →</span></button>
+    </div>
+  </section>
+  <section class="tab-panel" id="panel-architecture">
+    <div class="module-head">
+      <div class="module-eyebrow"><span class="num">MODULE 03 / 07</span></div>
+      <h2>Kiến trúc mạng nhiều lớp <span class="en">Network Architecture (MLP)</span></h2>
+      <p class="module-dek">Xếp nhiều neuron thành lớp <span class="kw">hidden layer</span>, và xếp nhiều lớp nối tiếp nhau — đó là toàn bộ ý tưởng của Multi-Layer Perceptron (MLP), nền tảng của mọi kiến trúc deep learning phức tạp hơn sau này.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <p class="section-label" style="margin-bottom:0; flex:1;">Sơ đồ mạng</p>
+          <div class="btn-row">
+            <button class="btn small" id="btn-randomize">🎲 Random hoá trọng số</button>
+            <button class="btn small primary" id="btn-forward">▶ Forward Pass</button>
+          </div>
+        </div>
+        <div class="scope" id="arch-svg-wrap" style="margin-top:14px; padding:8px;"></div>
+
+        <div class="field" style="margin-top:18px;">
+          <div class="field-top"><span class="field-label">Số neuron ở hidden layer</span><span class="field-value" id="v-hidden-n">4</span></div>
+          <input type="range" id="s-hidden-n" min="2" max="8" step="1" value="4">
+        </div>
+
+        <div class="readouts">
+          <div class="readout"><div class="k">Tổng tham số</div><div class="v" id="ro-param-count">26</div></div>
+          <div class="readout"><div class="k">Dự đoán</div><div class="v signal" id="ro-pred-class">—</div></div>
+        </div>
+        <div style="margin-top:12px;">
+          <div class="prob-row" id="prob-A"><span class="digit">A</span><div class="prob-bar-track"><div class="prob-bar-fill" style="width:0%"></div></div><span class="pct">0%</span></div>
+          <div class="prob-row" id="prob-B"><span class="digit">B</span><div class="prob-bar-track"><div class="prob-bar-fill" style="width:0%"></div></div><span class="pct">0%</span></div>
+        </div>
+      </div>
+
+      <div class="panel prose">
+        <p class="section-label">Cách đọc sơ đồ</p>
+        <ul>
+          <li><span class="kw">Input layer</span> (trái): 3 giá trị đầu vào cố định x₁, x₂, x₃ — ví dụ 3 đặc trưng (feature) trích xuất từ dữ liệu thật.</li>
+          <li><span class="kw">Hidden layer</span> (giữa): mỗi neuron ở đây nhận <strong>toàn bộ</strong> input, tính weighted sum + activation riêng — đây là nơi mạng "học" các đặc trưng trung gian mà con người không đặt tên được.</li>
+          <li><span class="kw">Output layer</span> (phải): 2 neuron, mỗi neuron đại diện một lớp (A / B), qua <span class="kw">softmax</span> để cho ra xác suất.</li>
+          <li>Dữ liệu chỉ đi <strong>một chiều</strong>, trái sang phải — đây gọi là <span class="kw">forward propagation</span>. Kéo thanh trượt để đổi số neuron hidden, rồi bấm <b>Forward Pass</b> để xem tín hiệu lan truyền.</li>
+        </ul>
+        <div class="callout">
+          <div class="icon">🔒</div>
+          <div class="body">
+            <div class="title">Kết nối với AI Security</div>
+            Mức độ kẻ tấn công biết về <strong>kiến trúc</strong> (số lớp, số neuron, activation) là một trục chính trong threat model của AI Security: <span class="kw warn">white-box</span> (biết toàn bộ kiến trúc + trọng số) cho phép tấn công chính xác và mạnh hơn nhiều so với <span class="kw">black-box</span> (chỉ thấy input/output qua API).
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-footnav">
+      <button class="foot-btn" data-goto="activation"><span class="fk">← Trước · 02</span><span class="ft">Hàm kích hoạt</span></button>
+      <button class="foot-btn next" data-goto="loss"><span class="fk">Tiếp theo · 04</span><span class="ft">Hàm mất mát (Loss Function) →</span></button>
+    </div>
+  </section>
+  <section class="tab-panel" id="panel-loss">
+    <div class="module-head">
+      <div class="module-eyebrow"><span class="num">MODULE 04 / 07</span></div>
+      <h2>Hàm mất mát <span class="en">Loss Function</span></h2>
+      <p class="module-dek">Mạng cần một con số duy nhất để biết nó đang "sai bao nhiêu" — <span class="kw">loss function</span> chính là con số đó, và toàn bộ quá trình huấn luyện chỉ đơn giản là tìm cách làm con số này nhỏ nhất có thể.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <p class="section-label">Thử nghiệm trực tiếp</p>
+        <div class="chip-row" style="margin-bottom:14px;">
+          <span style="font-size:12.5px; color:var(--text-faint); font-family:var(--font-mono); align-self:center;">Nhãn thật (y) =</span>
+          <button class="chip" data-actual="0">0</button>
+          <button class="chip active" data-actual="1">1</button>
+        </div>
+
+        <div class="field">
+          <div class="field-top"><span class="field-label">Dự đoán <span class="en">ŷ (predicted)</span></span><span class="field-value" id="v-yhat">0.50</span></div>
+          <input type="range" id="s-yhat" min="0.01" max="0.99" step="0.01" value="0.5">
+        </div>
+
+        <div class="scope scope-canvas" style="margin-top:14px;">
+          <canvas id="loss-canvas"></canvas>
+        </div>
+        <div class="legend" style="margin-top:10px;">
+          <span class="sw"><i style="background:var(--signal)"></i> MSE</span>
+          <span class="sw"><i style="background:var(--warn)"></i> Cross-Entropy</span>
+        </div>
+
+        <div class="readouts">
+          <div class="readout"><div class="k">MSE = (y-ŷ)²</div><div class="v signal" id="ro-mse">0.250</div><div class="bar-gauge"><i id="bar-mse" style="width:25%; background:var(--signal)"></i></div></div>
+          <div class="readout"><div class="k">Cross-Entropy</div><div class="v warn" id="ro-bce">0.693</div><div class="bar-gauge"><i id="bar-bce" style="width:20%; background:var(--warn)"></i></div></div>
+        </div>
+      </div>
+
+      <div class="panel prose">
+        <p class="section-label">Vì sao chọn hàm loss lại quan trọng</p>
+        <ul>
+          <li><span class="kw">MSE (Mean Squared Error)</span> — bình phương độ lệch. Trực quan, hay dùng cho bài toán hồi quy (regression), nhưng phạt sai lệch khá "nhẹ tay" khi ŷ gần 0 hoặc 1.</li>
+          <li><span class="kw warn">Cross-Entropy</span> — dùng log, là lựa chọn chuẩn cho bài toán phân loại. Nhìn đồ thị bên trái: khi model dự đoán <em>tự tin nhưng sai</em> (ví dụ y=1 mà ŷ=0.01), Cross-Entropy phạt rất nặng, gần như tiến tới vô cực — trong khi MSE gần như "bỏ qua".</li>
+          <li>Chính đặc tính này khiến Cross-Entropy ép model học cách đưa ra xác suất trung thực hơn, thay vì chỉ đoán đúng nhãn.</li>
+        </ul>
+        <div class="callout">
+          <div class="icon">🔒</div>
+          <div class="body">
+            <div class="title">Kết nối với AI Security</div>
+            Trong <span class="kw neg">data poisoning</span>, kẻ tấn công chèn dữ liệu độc hại vào tập huấn luyện để "lái" loss function tối ưu theo hướng có lợi cho chúng — model vẫn đạt loss thấp, vẫn trông "học tốt", nhưng đã âm thầm học thêm một hành vi ẩn (<span class="kw neg">backdoor</span>) mà đội ngũ huấn luyện không hề hay biết.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-footnav">
+      <button class="foot-btn" data-goto="architecture"><span class="fk">← Trước · 03</span><span class="ft">Kiến trúc mạng nhiều lớp</span></button>
+      <button class="foot-btn next" data-goto="gradient"><span class="fk">Tiếp theo · 05</span><span class="ft">Lan truyền ngược (Backpropagation) →</span></button>
+    </div>
+  </section>
+  <section class="tab-panel" id="panel-gradient">
+    <div class="module-head">
+      <div class="module-eyebrow"><span class="num">MODULE 05 / 07</span></div>
+      <h2>Lan truyền ngược &amp; Gradient Descent <span class="en">Backpropagation &amp; Gradient Descent</span></h2>
+      <p class="module-dek"><span class="kw">Backpropagation</span> tính xem mỗi weight ảnh hưởng đến loss bao nhiêu (đạo hàm / <span class="kw">gradient</span>). <span class="kw">Gradient Descent</span> dùng con số đó để chỉnh weight theo hướng làm loss giảm. Để dễ hình dung, mô-đun này thu nhỏ bài toán về đúng một weight duy nhất.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <p class="section-label">Loss landscape: L(w) = (w − 3)²</p>
+        <div class="scope scope-canvas tall">
+          <canvas id="gd-canvas"></canvas>
+        </div>
+
+        <div class="field" style="margin-top:16px;">
+          <div class="field-top"><span class="field-label">Learning rate <span class="en">η</span></span><span class="field-value warn" id="v-lr">0.15</span></div>
+          <input type="range" id="s-lr" min="0.01" max="1.10" step="0.01" value="0.15">
+        </div>
+
+        <div class="btn-row">
+          <button class="btn primary small" id="btn-step">Step ▶</button>
+          <button class="btn small" id="btn-auto">⏵ Tự động chạy</button>
+          <button class="btn small ghost" id="btn-reset-gd">↺ Reset (w ngẫu nhiên)</button>
+        </div>
+
+        <div class="readouts">
+          <div class="readout"><div class="k">w hiện tại</div><div class="v" id="ro-w">-2.00</div></div>
+          <div class="readout"><div class="k">Gradient dL/dw</div><div class="v warn" id="ro-grad">-10.00</div></div>
+          <div class="readout"><div class="k">Loss L(w)</div><div class="v signal" id="ro-loss">25.00</div></div>
+          <div class="readout"><div class="k">Số bước</div><div class="v" id="ro-steps">0</div></div>
+        </div>
+        <p id="gd-status" style="font-family:var(--font-mono); font-size:12px; color:var(--text-faint); margin-top:10px; min-height:16px;"></p>
+      </div>
+
+      <div class="panel prose">
+        <p class="section-label">Công thức</p>
+        <ul>
+          <li>Đạo hàm: <span class="kw">dL/dw = 2(w − 3)</span> — cho biết loss dốc lên hay dốc xuống tại vị trí w hiện tại, và dốc bao nhiêu.</li>
+          <li>Quy tắc cập nhật: <span class="kw warn">w ← w − η · dL/dw</span> — luôn đi <strong>ngược chiều gradient</strong>, về phía loss giảm.</li>
+          <li><strong>Learning rate (η)</strong> quyết định bước đi dài hay ngắn. Thử kéo η lên trên khoảng 1.0 và bấm Step nhiều lần — thay vì hội tụ, w sẽ dao động rồi <strong>phân kỳ (diverge)</strong>. Đây là lỗi thực tế rất hay gặp khi huấn luyện mô hình.</li>
+          <li>Với mạng nhiều lớp, <span class="kw">backpropagation</span> chỉ đơn giản là áp dụng <em>chain rule</em> để lan truyền gradient này ngược từ output về từng weight ở từng lớp — về bản chất vẫn là phép toán y hệt bạn vừa làm, lặp lại hàng triệu lần.</li>
+        </ul>
+        <div class="callout">
+          <div class="icon">🔒</div>
+          <div class="body">
+            <div class="title">Kết nối với AI Security</div>
+            Đây là nền tảng toán học của <span class="kw neg">adversarial examples</span>. Tấn công <span class="kw neg">FGSM</span> (Fast Gradient Sign Method) dùng đúng công thức gradient này — nhưng tính đạo hàm loss theo <strong>input</strong> thay vì theo weight, rồi <strong>cộng thêm</strong> vào ảnh theo hướng làm loss tăng: <span class="kw neg">x_adv = x + ε · sign(∇ₓL)</span>. Cùng một cơ chế toán học, đảo ngược mục tiêu — thay vì huấn luyện, nó tấn công. Sẽ đi sâu ở buổi sau.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-footnav">
+      <button class="foot-btn" data-goto="loss"><span class="fk">← Trước · 04</span><span class="ft">Hàm mất mát</span></button>
+      <button class="foot-btn next" data-goto="training"><span class="fk">Tiếp theo · 06</span><span class="ft">Trực quan huấn luyện →</span></button>
+    </div>
+  </section>
+  <section class="tab-panel" id="panel-training">
+    <div class="module-head">
+      <div class="module-eyebrow"><span class="num">MODULE 06 / 07</span></div>
+      <h2>Trực quan huấn luyện <span class="en">Training &amp; Decision Boundary</span></h2>
+      <p class="module-dek">Ghép Module 03–05 lại: một mạng nhỏ thật sự học, ngay trong trình duyệt. Dữ liệu là 2 lớp xếp theo hình vành khuyên — <strong>không thể</strong> tách bằng một đường thẳng, đây là lý do ta cần hidden layer + activation phi tuyến từ Module 02–03.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <p class="section-label" style="margin-bottom:0; flex:1;">Decision boundary — cập nhật theo thời gian thực</p>
+          <div class="btn-row">
+            <button class="btn small" id="btn-new-data">🎲 Dữ liệu mới</button>
+            <button class="btn small primary" id="btn-train">▶ Huấn luyện</button>
+          </div>
+        </div>
+        <div class="scope scope-canvas tall" style="margin-top:14px;">
+          <canvas id="train-canvas"></canvas>
+        </div>
+        <div class="legend" style="margin-top:10px;">
+          <span class="sw"><i style="background:var(--warn)"></i> Lớp A (vòng trong)</span>
+          <span class="sw"><i style="background:var(--neg)"></i> Lớp B (vòng ngoài)</span>
+          <span class="sw">Nền màu = xác suất dự đoán tại từng điểm trong không gian</span>
+        </div>
+        <div class="readouts">
+          <div class="readout"><div class="k">Epoch</div><div class="v" id="ro-epoch">0 / 350</div></div>
+          <div class="readout"><div class="k">Loss</div><div class="v signal" id="ro-train-loss">–</div></div>
+          <div class="readout"><div class="k">Độ chính xác</div><div class="v warn" id="ro-train-acc">–</div></div>
+        </div>
+        <div class="scope" style="margin-top:14px; height:120px;">
+          <canvas id="train-loss-canvas" style="width:100%; height:120px;"></canvas>
+        </div>
+      </div>
+
+      <div class="panel prose">
+        <p class="section-label">Điều gì đang xảy ra</p>
+        <ul>
+          <li>Mạng: <span class="kw">2 input → 8 hidden (sigmoid) → 1 output (sigmoid)</span>, đúng kiến trúc học ở Module 03.</li>
+          <li>Mỗi epoch: forward pass qua toàn bộ 60 điểm dữ liệu (Module 03), tính loss bằng Cross-Entropy (Module 04), rồi backpropagation + gradient descent chỉnh lại toàn bộ weight (Module 05).</li>
+          <li>Vùng nền chính là <span class="kw">decision boundary</span> — ranh giới mà model tin là phân chia 2 lớp. Ban đầu ngẫu nhiên, dần khớp theo hình vành khuyên của dữ liệu thật.</li>
+          <li>Bấm <b>Huấn luyện</b> để chạy 350 epoch liên tục; bấm <b>Dữ liệu mới</b> để lấy một bộ điểm khác và huấn luyện lại từ đầu.</li>
+        </ul>
+        <div class="callout">
+          <div class="icon">🔒</div>
+          <div class="body">
+            <div class="title">Kết nối với AI Security</div>
+            Những điểm nằm <strong>sát decision boundary</strong> chính là bề mặt tấn công dễ khai thác nhất: chỉ cần một nhiễu (<span class="kw neg">perturbation</span>) rất nhỏ đẩy điểm qua bên kia ranh giới, model sẽ đổi hoàn toàn kết quả dự đoán — trong khi mắt người gần như không nhận ra ảnh đã bị chỉnh sửa. Đây chính là ý tưởng cốt lõi của <span class="kw neg">evasion attack</span>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-footnav">
+      <button class="foot-btn" data-goto="gradient"><span class="fk">← Trước · 05</span><span class="ft">Lan truyền ngược</span></button>
+      <button class="foot-btn next" data-goto="mnist"><span class="fk">Tiếp theo · 07</span><span class="ft">Ứng dụng: nhận diện chữ số →</span></button>
+    </div>
+  </section>
+  <section class="tab-panel" id="panel-mnist">
+    <div class="module-head">
+      <div class="module-eyebrow"><span class="num">MODULE 07 / 07 · CAPSTONE</span></div>
+      <h2>Ứng dụng thực tế <span class="en">Handwritten Digit Recognition</span></h2>
+      <p class="module-dek">Toàn bộ Module 01–06 gộp lại thành một mạng thật, đã huấn luyện xong: <span class="kw">64 input (8×8 pixel) → 32 hidden (sigmoid) → 10 output (softmax)</span>. Vẽ một chữ số bất kỳ và xem forward pass hoạt động trực tiếp.</p>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <p class="section-label">Vẽ một chữ số (0–9)</p>
+        <div class="pixel-grid" id="pixel-grid"></div>
+        <div class="btn-row" style="margin-top:14px;">
+          <button class="btn small" id="btn-clear-px">🧹 Xoá</button>
+          <button class="btn small" id="btn-sample-px">📄 Mẫu có sẵn</button>
+        </div>
+        <p id="sample-truth" style="font-family:var(--font-mono); font-size:12px; color:var(--text-faint); margin-top:10px; min-height:16px;"></p>
+
+        <p class="section-label" style="margin-top:20px;">Bên trong hidden layer (32 neuron)</p>
+        <div class="pixel-grid" id="hidden-grid" style="grid-template-columns:repeat(8,1fr); max-width:260px;"></div>
+        <p style="font-size:12px; color:var(--text-faint); margin-top:8px;">Mỗi ô là một neuron ẩn — sáng hơn nghĩa là activation gần 1. Đây chính là các "đặc trưng trung gian" nhắc ở Module 03, chỉ máy hiểu.</p>
+      </div>
+
+      <div class="panel">
+        <p class="section-label">Dự đoán · Forward pass output</p>
+        <div style="display:flex; align-items:center; gap:24px; margin-bottom:18px;">
+          <div class="big-pred" id="big-pred">–</div>
+          <div style="font-size:13px; color:var(--text-dim);">
+            <div>Độ tin cậy: <b id="pred-confidence" style="color:var(--signal); font-family:var(--font-mono);">–</b></div>
+            <div style="margin-top:4px;">y = softmax(z), lớp có xác suất cao nhất</div>
+          </div>
+        </div>
+        <div id="prob-list"></div>
+
+        <div class="readouts" style="margin-top:18px;">
+          <div class="readout"><div class="k">Kiến trúc</div><div class="v" style="font-size:14px;">64→32→10</div></div>
+          <div class="readout"><div class="k">Test accuracy</div><div class="v signal" id="ro-model-acc">98.5%</div></div>
+          <div class="readout"><div class="k">Mẫu huấn luyện</div><div class="v" id="ro-model-n">1597</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:18px;">
+      <p class="section-label">Loss trong quá trình huấn luyện (offline, Python)</p>
+      <div class="scope" style="height:140px;">
+        <canvas id="train-history-canvas" style="width:100%; height:140px;"></canvas>
+      </div>
+      <p class="prose" style="margin-top:10px; margin-bottom:0;">Mô hình này được huấn luyện <em>offline</em> bằng đúng thuật toán vừa học (forward pass, cross-entropy, backpropagation, gradient descent) trên bộ dữ liệu chữ số viết tay 8×8 — cùng họ với MNIST gốc (28×28), nhưng nhỏ gọn hơn để chạy huấn luyện trực tiếp trong sách bài giảng này. Weight sau huấn luyện được nhúng thẳng vào file HTML, nên phần dự đoán phía trên chạy hoàn toàn trong trình duyệt của bạn — không gửi ảnh đi bất cứ đâu.</p>
+    </div>
+
+    <div class="callout">
+      <div class="icon">🔒</div>
+      <div class="body">
+        <div class="title">Kết nối với AI Security</div>
+        MNIST là bộ dữ liệu "hello world" của nghiên cứu <span class="kw neg">adversarial machine learning</span> — phần lớn paper kinh điển (FGSM, PGD, C&amp;W...) đều demo tấn công đầu tiên trên chính bộ dữ liệu này. Thử vẽ một chữ số mập mờ, nửa giống 3 nửa giống 8, và quan sát model "lưỡng lự" giữa 2 lớp ở bảng xác suất — đó chính xác là khu vực gần <span class="kw">decision boundary</span> (Module 06) mà buổi sau chúng ta sẽ học cách khai thác.
+      </div>
+    </div>
+
+    <div class="tab-footnav">
+      <button class="foot-btn" data-goto="training"><span class="fk">← Trước · 06</span><span class="ft">Trực quan huấn luyện</span></button>
+      <button class="foot-btn" data-goto="neuron"><span class="fk">Ôn lại</span><span class="ft">↺ Quay về Module 01</span></button>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<script>
+/* ============================================================
+   CORE: tab switching + shared math/draw helpers
+   ============================================================ */
+(function(){
+  const TABS = ['neuron','activation','architecture','loss','gradient','training','mnist'];
+
+  function activateTab(id){
+    TABS.forEach(t=>{
+      const panel = document.getElementById('panel-'+t);
+      const nav = document.querySelector('.nav-item[data-tab="'+t+'"]');
+      const mnav = document.querySelector('.mobile-tabbar button[data-tab="'+t+'"]');
+      if(!panel) return;
+      const isActive = t===id;
+      panel.classList.toggle('active', isActive);
+      if(nav) nav.classList.toggle('active', isActive);
+      if(mnav) mnav.classList.toggle('active', isActive);
+    });
+    window.scrollTo({top:0, behavior:'instant' in window ? 'instant':'auto'});
+    if(window.__onTabShown) window.__onTabShown(id);
+    try{ localStorage.setItem('nn-demo-tab', id); }catch(e){}
+  }
+  window.activateTab = activateTab;
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.querySelectorAll('.nav-item, .mobile-tabbar button, [data-goto]').forEach(el=>{
+      el.addEventListener('click', ()=>{
+        const id = el.getAttribute('data-tab') || el.getAttribute('data-goto');
+        if(id) activateTab(id);
+      });
+    });
+    activateTab(TABS[0]);
+  });
+
+  window.NN_TABS = TABS;
+})();
+
+/* ---------- math helpers ---------- */
+const MathNN = {
+  sigmoid: (z)=> 1/(1+Math.exp(-z)),
+  sigmoidDeriv: (a)=> a*(1-a), // a = sigmoid(z) already
+  relu: (z)=> Math.max(0,z),
+  reluDeriv: (z)=> z>0?1:0,
+  tanh: (z)=> Math.tanh(z),
+  tanhDeriv: (a)=> 1-a*a,
+  step: (z)=> z>=0?1:0,
+  softmax: (arr)=>{
+    const m = Math.max(...arr);
+    const ex = arr.map(v=>Math.exp(v-m));
+    const s = ex.reduce((a,b)=>a+b,0);
+    return ex.map(v=>v/s);
+  },
+  clamp: (v,lo,hi)=> Math.max(lo,Math.min(hi,v)),
+  lerp: (a,b,t)=> a+(b-a)*t,
+  fmt: (v,d=2)=> (typeof v==='number' ? v.toFixed(d) : v),
+};
+
+/* ---------- DPI-aware canvas setup ---------- */
+function setupCanvas(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.max(rect.width, canvas.width, 1);
+  const h = Math.max(rect.height || canvas.clientHeight, canvas.height, 1);
+  canvas.width = Math.round(w*dpr);
+  canvas.height = Math.round(h*dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx, w, h};
+}
+
+/* ---------- simple line-chart drawer on canvas ----------
+   opts: { data:[...], color, fillColor, min, max, padding, lineWidth, points:[{x,y,color}] } */
+function drawLineChart(canvas, seriesList, opts){
+  opts = opts || {};
+  const {ctx, w, h} = setupCanvas(canvas);
+  ctx.clearRect(0,0,w,h);
+  const pad = opts.padding || {l:34, r:14, t:14, b:22};
+  const plotW = w - pad.l - pad.r;
+  const plotH = h - pad.t - pad.b;
+
+  let allVals = [];
+  seriesList.forEach(s=> allVals = allVals.concat(s.data));
+  let min = opts.min !== undefined ? opts.min : Math.min(...allVals);
+  let max = opts.max !== undefined ? opts.max : Math.max(...allVals);
+  if(min===max){ min-=1; max+=1; }
+  const pd = (max-min)*0.08;
+  min -= pd; max += pd;
+
+  // grid
+  ctx.strokeStyle = 'rgba(126,158,214,0.12)';
+  ctx.lineWidth = 1;
+  const gridN = 4;
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.fillStyle = 'rgba(146,160,188,0.7)';
+  for(let i=0;i<=gridN;i++){
+    const y = pad.t + plotH*i/gridN;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+plotW,y); ctx.stroke();
+    const val = max - (max-min)*i/gridN;
+    ctx.fillText(val.toFixed(opts.yDecimals!==undefined?opts.yDecimals:2), 2, y+3);
+  }
+
+  seriesList.forEach(s=>{
+    const n = s.data.length;
+    if(n<1) return;
+    ctx.beginPath();
+    s.data.forEach((v,i)=>{
+      const x = pad.l + (n===1?0:plotW*i/(n-1));
+      const y = pad.t + plotH*(1-(v-min)/(max-min));
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle = s.color || '#4FD6C4';
+    ctx.lineWidth = s.lineWidth || 2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    if(s.fill){
+      ctx.lineTo(pad.l+plotW, pad.t+plotH);
+      ctx.lineTo(pad.l, pad.t+plotH);
+      ctx.closePath();
+      ctx.fillStyle = s.fillColor || 'rgba(79,214,196,0.08)';
+      ctx.fill();
+    }
+    // last point marker
+    if(s.markLast){
+      const lastV = s.data[n-1];
+      const x = pad.l + plotW;
+      const y = pad.t + plotH*(1-(lastV-min)/(max-min));
+      ctx.beginPath(); ctx.arc(x,y,3.5,0,7); ctx.fillStyle = s.color||'#4FD6C4'; ctx.fill();
+    }
+  });
+
+  return {min, max, pad, plotW, plotH, w, h};
+}
+
+/* ---------- resize helper: re-run a draw fn on resize (debounced) ---------- */
+function onResizeRedraw(fn){
+  let t=null;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(t);
+    t = setTimeout(fn, 120);
+  });
+}
+
+</script>
+<script>
+/* Pretrained weights: 64 (8x8 pixel) input -> 32 hidden (sigmoid) -> 10 output (softmax).
+   Trained offline in Python (numpy, from-scratch forward/backward pass) on the
+   scikit-learn digits dataset (1797 handwritten-digit samples, 8x8, same family as MNIST).
+   Test accuracy: 0.985 on a held-out set of 200 samples. */
+const MODEL_WEIGHTS = {"W1": [[-0.17317, -0.13841, 0.11491, 0.06907, 0.01272, -0.03425, 0.02632, 0.11004, 0.18448, 0.19046, 0.04649, -0.02149, 0.01828, 0.06527, 0.06476, 0.1635, 0.26447, -0.02566, 0.26949, 0.14653, -0.0126, 0.18732, 0.21071, -0.05754, 0.21653, 0.13439, 0.29607, -0.053, -0.04418, -0.25333, 0.0714, 0.04691], [-0.03327, -0.01104, -0.12592, 0.21115, 0.015, 0.38469, -0.05728, -0.0623, -0.04702, -0.15648, 0.23872, -0.0977, 0.00873, -0.02003, 0.21554, 0.03311, -0.02553, 0.00256, 0.08925, 0.51119, -0.07078, 0.00206, 0.31193, -0.14026, 0.1092, -0.0021, -0.16751, -0.04072, -0.04308, -0.11633, -0.20539, -0.29783], [0.18679, 0.08341, 0.78432, 0.23943, 0.24465, -0.14315, -0.19881, 0.5894, 0.11983, 0.44139, 0.6982, -0.31781, 0.44638, 0.04953, 0.47399, -0.56986, -0.56167, -0.50457, -0.34446, 0.39586, -0.45991, 0.17308, 0.48259, -0.02585, -0.57369, 0.17815, 0.32853, 0.32563, -0.31286, 0.34899, -0.78116, -0.53301], [0.13526, -0.44011, 1.06759, 0.52156, -0.03953, -0.34595, 0.07673, 0.11168, 0.30452, 0.14774, 0.01176, -0.02769, -0.15961, -0.90185, -0.20693, -0.51822, -0.29568, -0.61836, 0.2491, 0.69695, 0.16107, -0.75741, -0.76891, -0.20745, 0.27853, -0.30862, -0.81201, 0.14012, -0.23235, 0.3797, 0.35925, 0.2497], [-0.87237, 0.01196, -0.28152, 0.64086, -0.1295, -0.20716, 0.60427, 1.4521, 0.41413, -0.25872, 0.29936, -0.87124, -0.27144, 0.2115, -0.32818, -0.12872, -0.50305, -0.25356, -0.03159, 0.58036, 0.83114, -0.16136, -0.29943, -0.04007, 0.88939, -1.15511, -0.39941, 0.16799, -0.49922, 0.44359, -0.16586, -1.77222], [0.46076, -0.48755, 1.33103, 0.87816, -0.15854, -1.14846, -0.10226, 0.07656, -0.77589, -0.05431, -0.08096, 0.00615, -0.37144, -0.44016, 0.92201, 0.19501, 0.109, -0.6218, -0.8326, 1.15658, -0.8643, -0.54678, 0.19638, 0.904, 0.03212, 0.94284, -0.08338, 0.28851, -0.26071, 0.40585, -0.23095, -1.21255], [0.53996, -0.30867, 0.81758, 0.76492, -0.18182, -0.05114, -0.08522, 0.28747, 0.16556, 0.84113, -0.05425, -0.37575, -0.31401, -0.12525, -0.4593, -0.68399, -0.12465, -0.47795, -0.58755, 0.91804, -0.36456, -0.27063, 0.13173, 0.06292, -0.09677, 0.73767, 0.06905, 0.59481, -0.18545, 0.43364, -0.183, -0.99393], [-0.05325, 0.02244, -0.05336, 0.03923, 0.07341, 0.06656, -0.02089, -0.08295, -0.06316, 0.09816, -0.06925, -0.05541, -0.04545, -0.27344, -0.27119, -0.10112, -0.05034, 0.04828, -0.0123, 0.16809, -0.06563, 0.29568, -0.16561, -0.39892, 0.30123, 0.17226, -0.14314, -0.02884, 0.14453, -0.03456, -0.28793, -0.12798], [0.00917, 0.03372, 0.10112, -0.17034, -0.20693, 0.19049, -0.17234, -0.13748, -0.12576, 0.25633, 0.05108, 0.12508, 0.03837, -0.07306, 0.08504, -0.18811, -0.14281, 0.11775, -0.17455, -0.03418, -0.01779, -0.06207, -0.25121, -0.07822, -0.10167, 0.02373, 0.01824, 0.04079, -0.09263, 0.04446, -0.19951, -0.20968], [-0.45663, 0.00344, 0.07516, -0.0592, 0.15, 0.19734, -0.04846, 0.41451, 0.10753, 0.56388, 0.23622, -0.18123, -0.44173, -0.568, -0.35503, -0.41093, -0.43742, -0.44741, 0.12421, 0.31911, 0.28253, -0.05425, -0.02741, -0.05908, 0.3917, -0.67506, 0.01871, -0.06704, 0.31381, 0.49853, 0.2309, -0.21829], [-0.61908, -0.02791, 0.53433, 0.25907, 0.32607, 0.00066, 0.21091, 1.49805, 0.58478, 0.22106, 0.37879, -0.25939, 0.38233, -0.5014, 0.37637, -0.9086, -0.70502, -0.1455, -0.34815, 0.01017, 0.64622, 0.12652, -0.21663, -0.27344, 0.26082, -0.55118, -0.37282, -0.00505, -0.51322, 0.10493, -0.48441, -0.59369], [0.25141, -0.29567, -0.01577, 0.61908, -0.19923, 0.03753, 0.29856, 0.3167, 0.6352, 0.24006, -0.01739, -0.57078, 0.32559, -0.20795, 0.48037, -0.66917, -0.16544, -0.34389, -0.26253, 0.44697, 0.09824, -0.56748, -0.01141, -0.13673, -0.04254, -0.01912, -0.25989, 0.02542, -0.33396, 0.20392, 0.09271, -0.24405], [0.59738, -0.54179, 0.64655, 0.94337, 0.51803, -0.47429, -0.45628, -0.61446, -0.35911, 0.54787, -0.20054, -0.19315, -0.89775, -0.92182, -0.06062, -0.3732, -0.71075, -0.35839, 0.08963, 1.15774, -0.30728, -0.10982, 0.0622, -0.17986, 1.01359, -0.27552, -0.31088, 0.7373, -0.6419, 0.84217, -0.2533, -0.88727], [-0.46137, 0.0199, 0.68398, 0.28154, 0.32069, -0.39263, 0.19485, 0.33969, -0.29873, -0.72297, -0.61503, 0.01368, -0.04197, -0.54553, 0.06845, 0.31268, -0.36553, 0.02252, -0.02159, -0.20173, -0.30525, -0.34446, -0.23411, 0.26034, 0.73753, -0.63959, -0.45789, -0.27534, -0.12041, -0.34876, 0.31313, 0.53878], [-0.43552, -0.0452, -0.00702, 0.23954, -0.30772, 0.01384, 0.31887, 0.63776, 0.31317, 0.13991, -0.00854, -0.24341, -0.15097, -0.57688, -0.27403, -0.09481, -0.43345, 0.03568, -0.17789, 0.42747, 0.41353, -0.1817, -0.54345, -0.17349, 0.49639, -0.13242, -0.20344, 0.02287, -0.24286, -0.30394, -0.10181, -0.64346], [0.13545, 0.20085, -0.13897, 0.06175, 0.08347, 0.01847, -0.09673, -0.06688, 0.23579, 0.15046, -0.0129, 0.01005, -0.34295, -0.19191, -0.09624, 0.07592, 0.11846, -0.02578, 0.12544, 0.25615, -0.09137, 0.36774, 0.1035, 0.09452, 0.09951, 0.07503, 0.15996, 0.28087, 0.12396, 0.115, -0.06027, -0.01017], [-0.11017, -0.01053, 0.22935, -0.16002, -0.10357, 0.06899, 0.02104, -0.18083, -0.10023, -0.1517, 0.11219, -0.01659, 0.22302, -0.0246, -0.02866, -0.02188, 0.00824, 0.01179, 0.33187, -0.03195, -0.07155, 0.00088, 0.1345, -0.16414, 0.05948, -0.07005, 0.07875, -0.05885, -0.27551, 0.06355, 0.07873, -0.05673], [-0.20351, -0.4164, 0.26562, -0.23835, 0.06692, -0.16597, -0.35271, 0.17363, -0.33977, 0.01602, 0.1302, -0.06331, 0.33397, -0.05387, 0.36974, 0.08637, 0.0329, -0.30808, 0.02536, -0.51437, -0.27985, -0.23196, 0.0352, 0.36822, 0.23407, 0.26233, 0.12715, -0.28434, 0.15622, 0.11259, 0.26973, 0.43388], [0.12035, -0.179, -0.16661, -0.76725, 0.57052, 0.55244, -0.1411, -0.21591, 0.18272, 0.63114, -0.43342, 0.23565, 1.70047, 0.67749, 0.82385, -0.57131, -0.18408, 0.80834, -0.59063, -1.06064, -0.23492, -0.13552, 0.38346, 0.24557, -0.7615, 0.47752, 0.15775, -0.51385, -0.09657, -0.65015, -0.14264, 1.23167], [1.06933, -0.58922, -0.23908, -0.33683, -0.57292, 0.10498, -0.29186, -1.1722, -0.58357, -0.3611, -0.70274, 0.33081, 0.59955, 0.39039, 0.66722, 0.02772, 0.6989, 0.3581, -0.29546, -0.19257, -1.57278, -0.23057, 0.63292, 0.74, -0.42402, 1.09661, 0.49127, -0.40368, 0.10375, -0.04131, 0.65569, 1.73965], [-0.12815, 0.00719, 0.61969, -0.57508, -0.62358, -0.33493, -0.87276, -0.24154, -0.63368, 0.00784, -0.24119, 0.06495, -1.06111, -1.66247, -1.05951, 0.71877, 0.52865, -0.29206, 0.67959, 0.56153, -0.41346, 0.13553, -1.08081, 0.1017, 1.55084, -0.00327, 0.28004, -0.18593, 0.6595, 0.55978, 1.1151, 0.83722], [-0.37435, -0.38363, 0.43173, 0.17145, 0.16714, 0.46458, -0.0144, 0.53744, 0.46579, 0.38246, -0.92936, -0.40132, -0.02155, -0.99832, -1.41378, -0.37944, -1.41342, 0.15938, 0.47474, -0.87286, 0.4348, 0.11935, -1.45261, -0.51699, 1.87412, -0.46237, 0.17624, -0.66099, -0.88587, -0.08276, 0.88148, 2.42124], [-0.12656, 0.33241, -0.35509, -0.26726, 0.08592, 0.12133, -0.02353, -0.22408, 0.03218, 0.11944, -0.52146, 0.00254, -0.47958, -0.6908, -0.46649, 0.32081, -0.20175, 0.52332, 0.67291, -0.10475, 0.26783, 0.17472, -0.78614, -0.80429, 1.09013, -0.21901, -0.16637, 0.22858, 0.03153, -0.29173, 0.31966, 0.46856], [0.13363, 0.28171, 0.02105, 0.25073, -0.11436, 0.2805, -0.04935, -0.06717, 0.00064, -0.00289, -0.00111, -0.08147, 0.05132, -0.07442, 0.03656, 0.19865, -0.03563, 0.12441, 0.1105, 0.27401, -0.06064, 0.15337, -0.2185, -0.10858, 0.05593, 0.18817, -0.12473, 0.11766, 0.00478, -0.17189, 0.02815, 0.20155], [-0.12688, -0.01763, -0.11625, -0.06092, 0.16985, -0.03534, 0.16071, 0.10246, -0.06465, -0.06268, -0.11435, -0.1119, 0.0409, -0.0149, -0.08392, -0.18685, 0.03338, -0.0623, -0.0133, 0.03918, -0.32864, -0.19076, 0.28865, -0.05818, -0.31381, -0.16599, 0.31645, -0.08574, 0.15292, 0.02815, -0.04492, 0.09935], [-0.05312, -0.55676, -0.54472, -0.24802, -0.05536, 0.45441, -0.11007, -0.08296, 0.15078, 0.10727, -0.05584, -0.20894, 0.88442, 0.63172, 0.04403, -0.1629, 0.36218, -0.21798, -0.06482, -0.70512, -0.31732, -0.05017, 0.45391, 0.20202, -0.41932, 0.34997, 0.16836, -0.57529, -0.02249, 0.10321, -0.2263, 0.09709], [0.5495, -0.52548, -0.14024, 0.23428, -0.81894, 0.8727, -0.11715, -0.12681, 0.76278, 0.07145, -0.2783, -0.28458, 1.11957, 1.52071, -0.68088, -0.44307, 0.44609, 0.61563, -0.79633, -1.28132, -0.8185, 0.15645, 0.21511, 0.41468, -1.12793, 1.07752, 0.67502, -0.77266, -0.65092, -0.08186, 0.27274, 1.04269], [-0.29054, -0.2716, 0.91359, 0.23854, -1.50226, -0.44118, 0.20987, 0.82922, -0.34289, -0.45167, -0.18243, 0.21586, 1.30971, -0.14902, 0.23619, 0.79085, 0.30621, 0.80529, -0.42874, -0.52226, -0.39163, -0.65414, -0.75095, 0.77399, -0.82824, 0.74975, 0.20826, -1.20764, -0.13801, -0.94069, 0.8183, 1.77169], [-0.06915, 0.29323, 1.23845, -0.16159, -1.54974, -0.48719, -0.06429, 0.92922, 0.19927, 0.46134, 0.64889, -0.43354, -0.41492, -0.54624, -0.71509, 0.22789, 1.00796, -0.81503, -0.33665, 0.54209, 0.1474, -0.07016, -0.30706, 0.21118, -1.08216, 1.16402, 0.35655, -0.16493, 0.48263, 0.32462, 0.56307, -0.29453], [0.42628, -0.40999, 0.1086, 0.06939, -0.13396, 0.57526, 0.05748, -0.63389, 0.11378, 1.04964, -1.07698, 0.15988, 0.5099, -0.24894, -0.79009, -0.2475, -0.57225, 0.24821, -0.01405, -0.20249, 0.2149, 0.08058, -0.26276, -0.8893, 0.70459, 0.59758, -0.06869, -0.17665, -0.67238, -0.52806, 0.03433, 0.613], [0.48356, 0.21065, -0.84376, -0.19419, -0.17003, 0.86817, -0.16185, -0.37385, 0.48536, 0.8388, -0.6723, -0.28194, -0.4182, 0.38917, -1.14727, -0.19633, -0.14489, 0.43793, 0.43731, -0.70697, -0.01179, 1.01559, -0.21741, -1.04813, 0.64547, 0.65936, 0.56437, 0.0362, -0.3103, 0.36343, -0.04254, 0.24681], [0.12295, 0.1543, 0.04376, -0.05049, -0.2016, -0.09196, -0.06206, -0.09241, 0.00671, -0.04393, 0.02258, 0.15106, -0.05044, -0.16607, -0.0892, 0.07617, 0.08987, 0.05173, 0.16608, -0.02943, 0.25308, 0.10491, -0.31287, 0.22699, -0.10002, -0.1269, 0.07006, -0.22201, -0.08356, 0.19711, 0.07157, 0.10261], [-0.08211, -0.1923, 0.08835, 0.11628, 0.11062, 0.02613, -0.12088, 0.30472, 0.05997, -0.02174, -0.02118, 0.0187, 0.1337, 0.0237, 0.10731, 0.01892, -0.01404, 0.08016, 0.07541, -0.0212, -0.09365, 0.04272, 0.00979, -0.06936, -0.1053, 0.05131, 0.06876, -0.045, -0.07249, -0.10378, 0.04778, -0.1005], [0.59809, 0.07911, -1.09951, -0.0288, 0.02658, 0.45051, 0.11052, -0.72686, 0.23608, -0.3075, -0.40481, 0.1019, -0.32013, 0.84664, -0.03647, 0.20604, 0.4752, 0.40876, 0.26575, -0.3523, -0.03236, 0.39842, 0.44606, 0.17739, -0.25635, 0.08294, 0.11512, -0.005, 0.11522, 0.34754, -0.68893, -0.56843], [0.32083, -0.04921, -0.4915, 0.27489, -0.3565, 0.29044, 0.4023, -0.69962, 0.56539, -0.45251, -0.68487, -0.19582, 0.24889, 1.05675, -0.25472, 0.40695, 0.64038, 0.66646, -0.41666, -0.42156, -0.79255, 0.13094, 0.30249, 0.38362, -0.65465, 0.37823, 0.29906, -0.08916, -0.24631, 0.23521, -0.08667, 0.16429], [-0.46743, 0.5244, 0.49676, -0.11176, -0.58005, -0.39073, 0.62066, 1.31931, -0.06456, 0.35934, -0.20881, 0.19574, 0.7145, -0.46879, 0.54262, 0.54772, 0.31195, 1.15145, -0.16898, 0.45813, 0.30599, -0.14498, -1.07079, -0.06634, -0.42892, -0.17924, -0.31099, 0.15056, 0.13949, -0.93017, 0.37195, 0.55022], [-0.34957, 0.80532, 0.07302, -0.68656, -0.86704, -0.70578, 0.00287, 0.1452, 0.04786, -0.17894, 0.33009, 0.16271, -0.80577, -0.61562, -0.16611, 1.02804, 1.40165, 0.67286, 0.388, 0.52138, -0.05579, 0.68994, -0.60536, 0.1813, -0.4817, 0.54037, 0.32301, 0.48805, 0.89206, 0.06213, -0.34408, -0.67431], [0.91758, -0.05629, -0.46295, 0.53165, -0.77358, 0.13713, 0.3852, -1.2208, 0.45589, 0.02459, -0.46829, -0.40657, -0.86017, 0.74018, -1.11033, 0.09758, 0.89352, 0.15027, -0.03981, 0.12129, -0.08429, 0.50414, 0.44251, -0.54747, 0.03882, 0.91321, 0.3972, -0.08375, -0.19294, 0.2105, -0.26485, -0.47432], [0.68413, 0.04437, -1.09293, 0.82637, -0.72682, 0.69815, 0.09909, -0.45684, 0.8981, -0.00531, 0.03126, -0.64809, -0.30272, 1.29274, -1.0943, -0.52523, 0.25918, -0.39603, -0.12797, -0.23687, -0.15117, 0.50002, 0.57206, -0.35284, -0.40429, 0.15824, 0.32227, 0.16877, -0.21223, 0.59613, -0.51793, -0.53539], [-0.08204, -0.09909, 0.09326, -0.20313, 0.01152, -0.03957, -0.17572, -0.11641, -0.01362, 0.12925, -0.08162, 0.15167, 0.0079, 0.1638, -0.07556, -0.0061, 0.04606, -0.02244, 0.11913, -0.27595, 0.3028, 0.10722, -0.02169, -0.06904, -0.1083, 0.0807, 0.12437, -0.02032, 0.13837, -0.11341, -0.13548, 0.22667], [0.07534, 0.17297, -0.11194, -0.11969, -0.05588, -0.10001, 0.08331, -0.09506, -0.14418, 0.0197, -0.15886, -0.22895, 0.01068, -0.21734, 0.08806, -0.17405, -0.27708, -0.03457, 0.02068, 0.05854, 0.01618, -0.12227, 0.09069, 0.12012, -0.14959, -0.01406, -0.02173, 0.02545, -0.02656, 0.0026, 0.08124, -0.14012], [-0.03351, 0.28626, -0.6357, -0.71336, -0.26315, 0.15755, -0.45638, -0.15779, 0.32377, -0.05379, -0.00052, 0.00665, -0.41611, 0.66741, -0.64749, 0.60409, -0.2004, 0.71186, 0.39502, -0.71589, 0.14523, 0.85324, 0.14856, -0.10177, 0.2186, 0.36133, 0.65486, 0.06269, 0.00969, 0.5771, -0.15472, -0.11718], [-0.16521, 0.78645, -1.31258, -0.47184, 1.41902, 0.05348, 0.55113, -1.21879, -0.4478, -1.00417, -0.98535, 0.91514, 0.45165, 0.64386, 0.64024, 0.82833, -0.13937, 2.05664, 0.4589, -0.49598, 0.64342, 0.27201, 0.44169, -0.04297, 0.27678, -0.71296, -0.69441, 0.56421, -0.00553, -1.06849, -0.83014, 0.18061], [0.53465, 1.8076, -0.32856, -1.66839, 0.88169, 0.26754, -0.51268, -1.52765, -0.93106, 0.4096, -0.54349, 1.65416, -0.49097, -0.0885, 0.52225, 0.82787, 0.27533, 1.80583, 1.35923, -0.61149, -0.24895, 1.55526, 0.49794, -0.75707, -0.6057, 0.71369, 0.84935, 1.11143, 0.94645, -0.24378, -0.93649, -0.53594], [-0.3083, 0.14954, -0.80264, -0.40604, -0.4944, -0.40256, 0.28624, -0.23773, 0.33694, -0.77993, 0.08941, 0.01087, -0.85023, 0.54127, -0.00266, 1.151, 0.45904, 1.01875, 0.60454, -0.30316, -0.67017, 0.76104, -0.05402, 0.50966, -0.1999, 0.278, 0.98131, -0.06295, 0.14385, -0.12651, -0.18966, -0.09612], [-0.66442, -0.23264, -0.5917, 0.65968, -0.8635, -0.46005, 0.53896, 1.10762, 0.78726, -1.14504, 0.07142, -0.51496, 0.0133, 0.71923, -0.04753, 0.51188, 0.97011, 0.24935, -0.16306, -0.52121, -0.04253, 0.26987, 0.47747, 0.53961, 0.40851, 0.05096, 0.18892, -0.76056, -0.15254, -0.25184, -0.6564, -0.4796], [-0.14713, 0.10241, -0.62688, 0.60129, -0.22785, 0.22946, 0.95026, 0.37477, 0.64729, -0.56892, 0.32483, -0.39351, -0.04534, 1.07981, -0.58172, 0.34596, 0.3821, -0.1378, -0.04178, -0.41748, 0.89984, -0.41911, 0.39734, 0.00631, -0.61088, -1.05445, -0.52237, -0.19672, 0.01249, -0.38446, -0.38997, -0.74903], [-0.02349, -0.2859, 0.1824, -0.0567, 0.02089, 0.15836, -0.07206, 0.10968, -0.25349, 0.06621, 0.19639, -0.06788, 0.14956, 0.25853, -0.03402, -0.04167, -0.10641, -0.05957, -0.10458, -0.12425, 0.17118, -0.11054, 0.04215, -0.00428, 0.16992, -0.08623, 0.0294, 0.10412, 0.20086, -0.08994, -0.08819, -0.13768], [0.28242, 0.17749, -0.01263, 0.2306, -0.01841, 0.09927, -0.00799, 0.04761, 0.03542, -0.04156, 0.14678, 0.08793, 0.11604, 0.03734, -0.12017, 0.20775, -0.03467, 0.04315, 0.08432, 0.04776, 0.11731, 0.14411, -0.02278, 0.19453, -0.03276, 0.04595, -0.03974, -0.079, 0.13995, 0.40419, -0.04832, 0.13758], [-0.12667, 0.0848, 9e-05, -0.46706, -0.32542, 0.15095, -0.09532, 0.14919, 0.11151, 0.20027, 0.18673, -0.38651, -0.26566, -0.09237, -0.21507, 0.22148, -0.21421, 0.20694, 0.04451, -0.1063, 0.11482, 0.36536, 0.12083, -0.15657, 0.17461, 0.34869, 0.28702, 0.02161, -0.13922, 0.50886, 0.14382, 0.29558], [-0.12799, 0.23706, -0.12555, -0.38999, 0.62675, -0.22521, 0.05197, 0.52203, -0.08908, -0.63587, -0.4295, 0.70435, 0.36926, 0.03541, 0.54344, 0.14841, -0.36725, 0.22857, -0.03013, 0.25042, 0.50868, 0.02097, 0.23532, -0.08146, 0.32608, -0.36836, -0.29397, 0.32468, 0.03392, -0.58579, -0.6102, -0.22213], [0.81013, 0.68587, -0.05522, -0.2261, 0.86336, 0.7664, -0.54064, -1.4737, -0.39141, 0.77994, 0.23618, 0.31982, -0.53691, -0.08319, -0.12478, -0.47117, -0.05106, 0.23811, 0.55453, 0.20702, 0.35846, -0.09934, 0.15306, -0.90873, -0.21142, -0.47733, -0.23806, 0.99377, 0.9253, 0.26947, -0.20014, -0.39367], [0.18241, -0.53891, -0.71459, -0.46398, 1.24796, 0.14573, -0.93733, -1.40101, -0.50707, -0.51607, 0.79355, 0.48402, -0.1539, 0.2029, 0.54353, -0.2237, -0.76416, -0.99689, 0.48265, 0.17917, -0.61963, -0.40255, 1.33509, 0.77546, 0.103, -0.42982, 0.00561, -0.23374, 0.18821, 1.15268, -0.00152, -0.40678], [-0.40364, 0.17221, -0.20959, -0.3484, 0.83754, -0.2702, 0.04818, 0.00575, -0.59845, -0.78781, 0.63529, 0.65623, 0.37261, 0.2531, 1.43561, 0.23484, -0.19081, -0.69607, 0.22255, -0.09357, 0.43341, -0.97944, 0.62705, 0.09661, 0.22281, -0.80988, -1.10164, -0.08131, 0.78011, -0.52838, -0.4493, -0.1986], [-0.5318, 0.05179, -0.07571, 0.07155, -0.17628, -0.01652, 0.45619, 0.77811, -0.25001, 0.0831, 0.60052, 0.10292, -0.14292, -0.3357, 0.20083, 0.38499, 0.44462, -0.5686, 0.21078, 0.3428, 1.1291, -0.85937, -0.18189, -0.16949, 0.07816, -0.97433, -1.29569, -0.20735, 0.75898, -0.33015, 0.14697, -0.62042], [0.12918, 0.05148, 0.16721, -0.18934, -0.18295, -0.17652, -0.14281, -0.20128, -0.0141, -0.10298, -0.11172, 0.18749, -0.26635, -0.29835, 0.03245, 0.03921, -0.00677, -0.2279, 0.10208, 0.18856, -0.44713, 0.02454, 0.14635, 0.00271, -0.11108, 0.22738, 0.06832, 0.08969, 0.01371, 0.19688, 0.08796, 0.34784], [-0.14276, -0.06168, 0.07799, -0.2558, 0.02571, -0.12756, 0.001, -0.04424, 0.26289, -0.04604, 0.23272, 0.07408, -0.10113, 0.04018, -0.03753, 0.02766, -0.09223, 0.20963, 0.11625, 0.00578, 0.21968, 0.00785, 0.13852, 0.00184, 0.04981, -0.01414, 0.00838, 0.02358, -0.08118, -0.04871, -0.0288, 0.02428], [0.00371, 0.13096, 0.15594, 0.00825, 0.27308, 0.21308, -0.29668, 0.14452, -0.11364, 0.08962, 0.35529, -0.11947, -0.30845, 0.09388, 0.10805, -0.25314, 0.2726, -0.0992, 0.04292, 0.31831, -0.09075, -0.03177, -0.05622, 0.01394, -0.01575, -0.27549, -0.15732, -0.0135, 0.05149, 0.22018, -0.03977, -0.19618], [0.5798, -0.03296, 0.86157, 0.40436, 0.10469, 0.47726, -0.23321, 0.89434, 0.53192, 0.64229, 0.91368, -0.55978, -0.16763, -0.24856, -0.11036, -0.72968, -0.28105, -1.01312, -0.31207, 0.40972, -0.00884, 0.32256, 0.27346, -0.21003, -0.10377, -0.14023, 0.04803, 0.5577, -0.21254, 1.06619, -0.65088, -1.11054], [-0.165, -0.31807, 0.60736, 0.14316, 0.25571, -0.13976, -0.15716, 0.17369, -0.05044, -0.23584, 0.16363, -0.08417, 0.38807, -0.27349, 0.77434, -0.53273, -0.10736, -0.42623, -0.27832, -0.06543, 0.15082, -0.26192, 0.09578, 0.18624, -0.19293, -0.39455, -0.38353, -0.12402, -0.41965, 0.44591, -0.09127, 0.04228], [-0.53765, -0.40469, -0.06845, -0.62178, -0.03788, -0.11898, -0.23935, 0.10254, -0.66369, -0.64456, 0.48974, 0.24579, 0.42995, -0.30645, 1.33392, 0.17509, -0.16044, -0.30052, 0.03189, -0.20485, 0.41305, -0.67391, 0.2281, 0.47351, 0.21045, -0.13879, -0.32442, -0.61626, 0.20966, -0.34446, 0.37872, 0.63475], [0.23898, 0.0772, 0.17023, -0.36331, 0.19696, 0.02846, -0.31553, -0.61483, -0.84162, -0.00814, 0.51631, 0.52987, -0.02302, -0.05622, 0.78417, 0.09339, 0.20495, -0.83761, 0.52321, 0.37547, 0.67462, -1.38993, 0.23946, -0.06583, -0.17756, -0.3491, -1.14689, -0.02806, 1.03532, -0.24465, 0.51296, 0.27286], [0.30312, 0.08233, 0.04508, -0.31559, 0.59673, 0.47571, -0.45053, -1.02999, -0.73699, 0.59069, 0.34991, 0.35131, -0.54476, -0.57455, 0.44837, 0.05087, -0.10085, -0.63062, 0.51317, 0.52425, 0.20739, -0.48773, -0.16216, -0.42317, 0.24583, -0.0904, -0.50289, 0.26455, 0.93955, 0.26245, 0.3521, 0.1438], [0.25595, 0.01379, 0.37088, -0.44302, 0.09466, 0.04712, -0.23372, -0.78179, -0.47716, 0.31804, -0.09954, 0.2152, -0.0005, -0.25605, 0.17853, -0.03505, -0.169, -0.12613, 0.21586, 0.15147, -0.34688, -0.06906, 0.18288, -0.14728, 0.06424, 0.47027, 0.13856, 0.34413, -0.03276, 0.22962, 0.10465, 0.09241]], "b1": [-0.02549, 0.06437, -0.28203, 0.07608, -0.13, 0.33968, 0.17026, 0.1023, 0.38295, -0.12289, 0.19961, -0.25849, -0.35809, 0.04541, -0.55248, 0.03066, 0.04594, -0.05339, 0.37271, -0.15849, 0.11561, 0.26409, -0.04272, -0.21724, 0.26506, -0.13527, 0.06914, 0.03978, 0.10124, 0.43579, -0.32809, -0.58751], "W2": [[0.34181, 1.23011, 0.01885, -1.89084, 0.22894, 0.74494, 0.14512, 0.75383, -2.29863, -0.51007], [-1.14855, -0.35085, 0.95808, -0.68528, 0.85092, -0.84104, 1.28398, 0.92023, 0.08448, -2.11401], [-1.88367, 2.04934, 0.31431, 0.6807, -2.74677, 1.17098, -1.75329, -0.04591, 0.67096, 1.44481], [0.97117, -0.78486, -1.8051, 1.46781, -1.85121, 1.17022, -0.42945, 1.16698, -1.21717, 1.21203], [2.79189, -1.13183, 3.27235, -0.83802, -1.37457, -0.64388, 0.13849, -1.11895, -0.47031, -1.83373], [1.6912, -0.93994, 0.2969, -1.65344, 1.42595, -0.19354, 0.75747, -0.0686, -1.47235, 0.51309], [0.5247, -1.33512, -1.55541, 0.57516, -0.67987, -0.14075, 1.2413, 0.61917, 0.54179, 0.09035], [-0.61956, -3.89704, -1.22884, 2.61153, -1.12237, 1.462, -1.4306, -0.14626, 1.90146, 2.42438], [1.28425, -2.5565, -1.93755, 0.12084, 0.51562, 0.72545, -0.3661, 1.26435, -0.65553, 0.67648], [-0.97576, -0.59713, 1.52816, -1.57226, 0.44734, 0.35753, -0.96426, 1.6618, -0.93567, 1.55486], [-0.94709, -0.89729, 1.23102, 2.12119, 0.08867, 1.19965, -0.28433, -1.68664, -0.82942, -0.33877], [-0.30612, 1.32361, 1.47636, -1.25339, -0.10204, -0.89798, 0.95723, -0.70648, 0.88246, -1.74536], [1.61298, -0.94765, -1.05493, -1.71603, -0.81945, 1.59263, 0.54164, -2.36203, 1.5243, 1.63511], [2.37314, -1.31691, -2.05307, -1.88709, 1.71379, 1.97443, 2.62025, -0.48193, -1.20343, -1.19541], [-0.61068, 0.26893, 1.08149, -0.10649, -2.04791, 1.01193, 0.35284, -2.45177, 2.80612, -1.69175], [-1.23413, 1.33814, -0.97885, 0.98621, 0.5503, -1.55676, 1.16672, -0.11296, 1.72744, -1.14783], [-1.98557, 1.93138, -1.79012, 0.54005, 1.02115, -0.22056, 1.68253, -0.0984, -0.6935, -1.00056], [0.37435, -0.971, -1.18156, -1.79194, 1.41831, -1.56017, 1.17095, 1.12131, 3.19475, -0.65903], [0.26486, 0.74278, 1.23269, 0.38681, 1.1818, -2.44074, -0.24355, 0.33517, 0.15789, -1.29899], [-2.19631, 0.593, 1.56171, 2.51657, -2.68467, 0.25639, -1.1291, 1.2258, -0.52872, 0.3775], [0.34789, -2.67088, 1.07116, 0.80303, -0.99899, -1.44785, 0.9183, -0.183, 0.2247, 1.10986], [-0.2525, -0.25437, -0.80838, -0.75621, 2.61569, -0.09785, -1.54415, 2.38515, -0.04385, -1.37656], [0.95041, 0.03962, 0.34501, -0.79934, 0.54087, 1.60775, 1.02852, -0.85759, -1.40279, -2.23569], [0.00921, 1.23806, -1.24054, 0.84694, -0.2008, 1.714, 0.18417, -1.94854, 0.2685, -0.31182], [1.51209, -0.65108, 1.05066, 1.05803, -0.73027, -2.94481, -2.22072, 1.1307, 1.09445, 0.45616], [-1.84546, 2.50346, -1.32783, -2.24498, 1.59098, 1.07233, -0.82352, 1.109, 0.02831, -0.55515], [-0.40766, 0.67559, -1.74465, -1.19046, 2.90791, 0.60558, -1.51391, 1.17075, -0.17397, 0.05427], [-0.37949, 0.05865, 1.80822, -0.1032, -0.37006, 0.10351, 0.25131, 1.96264, -0.88878, -1.78132], [-1.53781, 0.46409, 1.8993, 0.30715, 0.76496, -1.25642, 1.72887, -0.85345, -0.64208, -1.23863], [0.05927, 0.12054, 0.54183, 1.0275, 0.76923, 1.20011, -2.73385, 0.63559, -2.17047, -0.10893], [-0.697, 1.13964, -0.60994, 0.25999, 0.19995, -1.27383, -0.70801, -1.05922, -0.43086, 2.42865], [0.85573, 2.33449, -1.49598, -3.12584, 0.65311, -2.00914, 0.31637, -2.1075, 1.46168, 3.3861]], "b2": [0.29882, -0.25295, -0.11615, 0.14374, -0.0908, 0.0448, -0.08785, 0.00537, -0.10301, 0.15804], "lossHistory": [2.3518, 1.8776, 1.2415, 0.8043, 0.579, 0.4505, 0.369, 0.3138, 0.2745, 0.2451, 0.2225, 0.2044, 0.1897, 0.1774, 0.167, 0.158, 0.1501, 0.1431, 0.1369, 0.1313, 0.1263, 0.1216, 0.1174, 0.1135, 0.1098, 0.1064, 0.1032, 0.1002, 0.0974, 0.0947, 0.0922, 0.0898, 0.0875, 0.0854, 0.0833, 0.0813, 0.0794, 0.0775, 0.0758, 0.0741, 0.0724, 0.0709, 0.0693, 0.0679, 0.0664, 0.0651, 0.0637, 0.0624, 0.0612, 0.06, 0.0588, 0.0577, 0.0566, 0.0555, 0.0545, 0.0534, 0.0525, 0.0515, 0.0506, 0.0497, 0.0488, 0.0479, 0.0471, 0.0463, 0.0455, 0.0447, 0.044, 0.0432, 0.0425, 0.0418, 0.0411, 0.0405, 0.0398, 0.0392, 0.0386, 0.038, 0.0374, 0.0368, 0.0363, 0.0357, 0.0352, 0.0347, 0.0342, 0.0337, 0.0332, 0.0327, 0.0323, 0.0318, 0.0314, 0.0309, 0.0305, 0.0301, 0.0297, 0.0293, 0.0289, 0.0285, 0.0281, 0.0278, 0.0274, 0.027], "meta": {"n_in": 64, "n_hidden": 32, "n_out": 10, "test_acc": 0.985, "n_train": 1597, "n_test": 200}};
+const MODEL_SAMPLES = [{"pixels": [0, 0, 0, 7, 12, 0, 0, 0, 0, 0, 4, 16, 8, 0, 0, 0, 0, 0, 12, 11, 0, 0, 0, 0, 0, 0, 15, 10, 8, 6, 1, 0, 0, 0, 15, 16, 8, 10, 8, 0, 0, 0, 14, 7, 0, 0, 12, 0, 0, 0, 8, 11, 0, 5, 16, 2, 0, 0, 0, 9, 14, 14, 5, 0], "label": 6}, {"pixels": [0, 0, 11, 16, 8, 0, 0, 0, 0, 6, 16, 11, 13, 9, 0, 0, 0, 7, 16, 0, 9, 16, 0, 0, 0, 2, 15, 12, 16, 16, 3, 0, 0, 0, 5, 7, 7, 16, 4, 0, 0, 0, 0, 0, 5, 16, 5, 0, 0, 0, 3, 7, 16, 11, 0, 0, 0, 0, 13, 16, 11, 1, 0, 0], "label": 9}, {"pixels": [0, 0, 8, 15, 12, 4, 0, 0, 0, 5, 14, 4, 11, 7, 0, 0, 0, 0, 0, 1, 14, 3, 0, 0, 0, 0, 2, 15, 14, 1, 0, 0, 0, 0, 0, 8, 13, 11, 0, 0, 0, 0, 0, 0, 0, 13, 5, 0, 0, 0, 12, 2, 3, 12, 7, 0, 0, 0, 13, 16, 15, 8, 0, 0], "label": 3}, {"pixels": [0, 0, 2, 12, 12, 12, 9, 2, 0, 0, 9, 15, 12, 13, 16, 5, 0, 0, 12, 8, 0, 8, 10, 0, 0, 1, 16, 3, 3, 15, 2, 0, 0, 1, 3, 0, 12, 7, 0, 0, 0, 0, 0, 4, 13, 0, 0, 0, 0, 0, 0, 13, 9, 0, 0, 0, 0, 0, 3, 15, 3, 0, 0, 0], "label": 7}, {"pixels": [0, 2, 13, 16, 10, 0, 0, 0, 0, 6, 13, 10, 16, 0, 0, 0, 0, 0, 0, 8, 14, 0, 0, 0, 0, 0, 1, 14, 9, 0, 0, 0, 0, 0, 9, 14, 1, 0, 0, 0, 0, 1, 14, 7, 0, 0, 1, 0, 0, 4, 16, 5, 7, 12, 14, 0, 0, 3, 15, 16, 16, 10, 1, 0], "label": 2}, {"pixels": [0, 0, 14, 10, 0, 0, 0, 0, 0, 0, 15, 13, 0, 0, 0, 0, 0, 11, 16, 16, 2, 0, 0, 0, 0, 3, 10, 16, 5, 0, 0, 0, 0, 0, 0, 14, 10, 0, 0, 0, 0, 0, 0, 10, 14, 0, 0, 0, 0, 0, 9, 14, 16, 11, 6, 0, 0, 0, 12, 16, 16, 16, 16, 9], "label": 1}, {"pixels": [0, 0, 8, 12, 16, 16, 9, 0, 0, 4, 16, 16, 13, 9, 2, 0, 0, 11, 14, 4, 0, 0, 0, 0, 0, 7, 15, 10, 1, 0, 0, 0, 0, 0, 12, 16, 13, 1, 0, 0, 0, 0, 0, 4, 16, 4, 0, 0, 0, 0, 5, 10, 16, 3, 0, 0, 0, 0, 9, 16, 10, 0, 0, 0], "label": 5}, {"pixels": [0, 0, 4, 16, 16, 4, 0, 0, 0, 0, 12, 11, 7, 11, 0, 0, 0, 0, 9, 2, 5, 12, 0, 0, 0, 0, 0, 0, 7, 11, 0, 0, 0, 0, 0, 0, 13, 6, 0, 0, 0, 0, 0, 2, 16, 1, 0, 0, 0, 0, 1, 15, 15, 10, 1, 0, 0, 0, 5, 16, 8, 11, 11, 0], "label": 2}, {"pixels": [0, 1, 12, 16, 16, 16, 4, 0, 0, 4, 16, 10, 4, 1, 1, 0, 0, 6, 13, 0, 0, 0, 0, 0, 0, 6, 16, 12, 5, 0, 0, 0, 0, 7, 11, 11, 15, 0, 0, 0, 0, 0, 0, 4, 16, 2, 0, 0, 0, 0, 2, 13, 10, 0, 0, 0, 0, 2, 16, 11, 0, 0, 0, 0], "label": 5}, {"pixels": [0, 4, 15, 15, 8, 0, 0, 0, 0, 8, 16, 16, 16, 3, 0, 0, 0, 1, 0, 1, 15, 5, 0, 0, 0, 0, 0, 0, 11, 6, 0, 0, 0, 0, 0, 3, 15, 2, 0, 0, 0, 0, 4, 15, 16, 14, 6, 0, 0, 6, 16, 16, 15, 11, 3, 0, 0, 7, 14, 11, 0, 0, 0, 0], "label": 2}, {"pixels": [0, 0, 4, 12, 13, 3, 0, 0, 0, 0, 7, 14, 16, 9, 0, 0, 0, 0, 0, 12, 16, 8, 0, 0, 0, 0, 0, 6, 16, 6, 0, 0, 0, 0, 0, 9, 16, 6, 0, 0, 0, 0, 0, 12, 16, 3, 0, 0, 0, 0, 0, 13, 16, 3, 0, 0, 0, 0, 0, 15, 16, 11, 0, 0], "label": 1}, {"pixels": [0, 0, 0, 0, 8, 14, 10, 0, 0, 0, 0, 9, 7, 9, 12, 0, 0, 0, 9, 8, 0, 12, 9, 0, 0, 4, 16, 8, 12, 16, 2, 0, 0, 5, 16, 16, 10, 15, 0, 0, 0, 0, 4, 0, 5, 11, 0, 0, 0, 0, 0, 0, 8, 9, 0, 0, 0, 0, 0, 0, 10, 10, 0, 0], "label": 9}];
+
+</script>
+<script>
+/* ============================================================
+   TAB 1 — Artificial Neuron
+   ============================================================ */
+(function(){
+  let ready = false;
+  let scatterPoints = [];
+
+  function genPoints(){
+    // hidden "true" separating line used to label points
+    const tw1 = 0.9, tw2 = -0.7, tb = 0.15;
+    const pts = [];
+    for(let i=0;i<8;i++){
+      const x1 = (Math.random()*5.2-2.6);
+      const x2 = (Math.random()*5.2-2.6);
+      const marginNoise = (Math.random()-0.5)*0.4;
+      const side = tw1*x1 + tw2*x2 + tb + marginNoise;
+      pts.push({x1, x2, label: side>=0 ? 1 : -1});
+    }
+    scatterPoints = pts;
+  }
+
+  function toPx(plot, x1, x2){
+    // domain [-3,3] -> pixel space
+    const px = plot.pad.l + (x1+3)/6 * plot.plotW;
+    const py = plot.pad.t + (1-(x2+3)/6) * plot.plotH;
+    return [px,py];
+  }
+
+  function drawScatter(w1,w2,b){
+    const canvas = document.getElementById('scatter-canvas');
+    if(!canvas) return;
+    const {ctx, w, h} = setupCanvas(canvas);
+    ctx.clearRect(0,0,w,h);
+    const pad = {l:34, r:16, t:16, b:26};
+    const plotW = w-pad.l-pad.r, plotH = h-pad.t-pad.b;
+    const plot = {pad, plotW, plotH};
+
+    // half-plane shading via fill of two polygons split by the line, sampling domain edges
+    function fAt(x1,x2){ return w1*x1+w2*x2+b; }
+    // build shading by scanning columns (cheap + robust for any line orientation)
+    const cols = 60;
+    for(let i=0;i<cols;i++){
+      const x1 = -3 + 6*(i+0.5)/cols;
+      // find x2 where f=0 (if w2 != 0): x2 = -(w1*x1+b)/w2
+      const colX = pad.l + plotW*(i/cols);
+      const colW = plotW/cols + 0.6;
+      if(Math.abs(w2) > 1e-3){
+        const x2b = -(w1*x1+b)/w2;
+        const [,pyB] = toPx(plot, x1, Math.max(-3,Math.min(3,x2b)));
+        const posIsTop = w2 < 0; // if w2<0, increasing x2 decreases f... determine sign at top (x2=3)
+        const fTop = fAt(x1,3);
+        const topPositive = fTop >= 0;
+        const yTop = pad.t;
+        const yBound = HclampPx(pyB, pad.t, pad.t+plotH);
+        const yBottom = pad.t+plotH;
+        ctx.fillStyle = topPositive ? 'rgba(240,168,78,0.06)' : 'rgba(232,99,126,0.06)';
+        ctx.fillRect(colX, yTop, colW, yBound-yTop);
+        ctx.fillStyle = topPositive ? 'rgba(232,99,126,0.06)' : 'rgba(240,168,78,0.06)';
+        ctx.fillRect(colX, yBound, colW, yBottom-yBound);
+      } else {
+        const f = fAt(x1,0);
+        ctx.fillStyle = f>=0 ? 'rgba(240,168,78,0.06)' : 'rgba(232,99,126,0.06)';
+        ctx.fillRect(colX, pad.t, colW, plotH);
+      }
+    }
+    function HclampPx(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+
+    // axes (x1=0 / x2=0)
+    ctx.strokeStyle = 'rgba(126,158,214,0.25)';
+    ctx.lineWidth = 1;
+    const [ax0,] = toPx(plot,0,-3); const [,ay0] = toPx(plot,-3,0);
+    ctx.beginPath(); ctx.moveTo(ax0,pad.t); ctx.lineTo(ax0,pad.t+plotH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(pad.l,ay0); ctx.lineTo(pad.l+plotW,ay0); ctx.stroke();
+
+    // decision boundary line: w1x1+w2x2+b=0
+    ctx.beginPath();
+    let first = true;
+    if(Math.abs(w2) > 1e-3){
+      [-3,3].forEach(x1=>{
+        const x2 = -(w1*x1+b)/w2;
+        const [px,py] = toPx(plot,x1,x2);
+        if(first){ ctx.moveTo(px,py); first=false; } else ctx.lineTo(px,py);
+      });
+    } else if(Math.abs(w1) > 1e-3){
+      const x1 = -b/w1;
+      const [px1,py1] = toPx(plot,x1,-3);
+      const [px2,py2] = toPx(plot,x1,3);
+      ctx.moveTo(px1,py1); ctx.lineTo(px2,py2);
+    }
+    ctx.strokeStyle = '#4FD6C4';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // points
+    let correct = 0;
+    scatterPoints.forEach(p=>{
+      const [px,py] = toPx(plot,p.x1,p.x2);
+      const pred = fAt(p.x1,p.x2) >= 0 ? 1 : -1;
+      if(pred===p.label) correct++;
+      ctx.beginPath();
+      ctx.arc(px,py,6,0,Math.PI*2);
+      ctx.fillStyle = p.label===1 ? '#F0A84E' : '#E8637E';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = pred===p.label ? 'rgba(255,255,255,0.85)' : 'rgba(255,60,60,0.9)';
+      ctx.stroke();
+    });
+
+    const scoreEl = document.getElementById('score-text');
+    if(scoreEl) scoreEl.textContent = correct+'/'+scatterPoints.length;
+  }
+
+  function currentVals(){
+    return {
+      x1: parseFloat(document.getElementById('s-x1').value),
+      x2: parseFloat(document.getElementById('s-x2').value),
+      w1: parseFloat(document.getElementById('s-w1').value),
+      w2: parseFloat(document.getElementById('s-w2').value),
+      b:  parseFloat(document.getElementById('s-b').value),
+    };
+  }
+
+  function weightVisual(edgeId, weight){
+    const el = document.getElementById(edgeId);
+    if(!el) return;
+    const mag = Math.min(Math.abs(weight)/2, 1);
+    el.style.strokeWidth = (1.5 + mag*4.5).toFixed(2);
+    el.style.stroke = weight>=0 ? '#4FD6C4' : '#E8637E';
+    el.style.opacity = (0.45 + mag*0.55).toFixed(2);
+  }
+
+  function update(){
+    const {x1,x2,w1,w2,b} = currentVals();
+    document.getElementById('v-x1').textContent = x1.toFixed(1);
+    document.getElementById('v-x2').textContent = x2.toFixed(1);
+    document.getElementById('v-w1').textContent = w1.toFixed(1);
+    document.getElementById('v-w2').textContent = w2.toFixed(1);
+    document.getElementById('v-b').textContent = b.toFixed(1);
+
+    const z = w1*x1 + w2*x2 + b;
+    const y = MathNN.sigmoid(z);
+
+    document.getElementById('ro-z').textContent = z.toFixed(2);
+    const roY = document.getElementById('ro-y'); roY.textContent = y.toFixed(3);
+    const decision = document.getElementById('ro-decision');
+    decision.textContent = y>=0.5 ? 'Lớp A (y≥0.5)' : 'Lớp B (y<0.5)';
+    decision.style.color = y>=0.5 ? 'var(--warn)' : 'var(--neg)';
+
+    document.getElementById('val-x1-svg').textContent = 'x₁='+x1.toFixed(1);
+    document.getElementById('val-x2-svg').textContent = 'x₂='+x2.toFixed(1);
+    document.getElementById('val-z-svg').textContent = 'z='+z.toFixed(2);
+    document.getElementById('val-y-svg').textContent = 'y='+y.toFixed(2);
+    document.getElementById('lbl-w1').textContent = 'w₁='+w1.toFixed(1);
+    document.getElementById('lbl-w2').textContent = 'w₂='+w2.toFixed(1);
+    document.getElementById('lbl-b').textContent  = 'b='+b.toFixed(1);
+
+    weightVisual('edge-w1', w1);
+    weightVisual('edge-w2', w2);
+    weightVisual('edge-b', b);
+
+    const outNode = document.getElementById('node-out');
+    if(outNode){
+      const t = y;
+      outNode.style.fill = `rgba(79,214,196,${(0.08+t*0.5).toFixed(2)})`;
+      outNode.style.stroke = t>=0.5 ? '#4FD6C4' : '#E8637E';
+    }
+    const sumNode = document.getElementById('node-sum');
+    if(sumNode){
+      const mag = Math.min(Math.abs(z)/3,1);
+      sumNode.style.stroke = mag>0.15 ? '#F0A84E' : 'var(--border)';
+    }
+
+    drawScatter(w1,w2,b);
+  }
+
+  function init(){
+    if(ready) return;
+    ['s-x1','s-x2','s-w1','s-w2','s-b'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.addEventListener('input', update);
+    });
+    const btn = document.getElementById('btn-new-points');
+    if(btn) btn.addEventListener('click', ()=>{ genPoints(); update(); });
+    genPoints();
+    update();
+    onResizeRedraw(()=>update());
+    ready = true;
+  }
+
+  window.__onTabShown = window.__onTabShown || function(){};
+  const prevShown = window.__onTabShown;
+  window.__onTabShown = function(id){
+    prevShown(id);
+    if(id==='neuron'){ init(); update(); }
+  };
+})();
+/* ============================================================
+   TAB 2 — Activation Function
+   ============================================================ */
+(function(){
+  let ready = false;
+  let currentFn = 'sigmoid';
+
+  const FNS = {
+    sigmoid: {
+      f: MathNN.sigmoid,
+      range: [-0.2, 1.2],
+      formula: 'f(x) = 1 / (1 + e⁻ˣ)',
+      desc: `<p><span class="kw">Sigmoid</span> nén mọi giá trị đầu vào về khoảng (0, 1) — rất hợp để biểu diễn xác suất ở lớp output của bài toán phân loại nhị phân.</p>
+             <ul>
+               <li>Trơn, khả vi ở mọi điểm → dùng được với <span class="kw">gradient descent</span>.</li>
+               <li>Nhược điểm: ở hai đầu (x rất âm hoặc rất dương), hàm gần như phẳng — đạo hàm gần 0, việc học rất chậm (<span class="kw neg">vanishing gradient</span>).</li>
+             </ul>`
+    },
+    tanh: {
+      f: MathNN.tanh,
+      range: [-1.2, 1.2],
+      formula: 'f(x) = tanh(x)',
+      desc: `<p><span class="kw">Tanh</span> giống Sigmoid nhưng nén về khoảng (-1, 1) và có tâm tại 0 (zero-centered).</p>
+             <ul>
+               <li>Zero-centered giúp mạng hội tụ nhanh hơn Sigmoid trong nhiều trường hợp.</li>
+               <li>Vẫn bị bão hòa ở hai đầu → vẫn gặp vanishing gradient khi mạng sâu.</li>
+             </ul>`
+    },
+    relu: {
+      f: MathNN.relu,
+      range: [-1, 5],
+      formula: 'f(x) = max(0, x)',
+      desc: `<p><span class="kw">ReLU</span> (Rectified Linear Unit) là lựa chọn mặc định của phần lớn mạng deep learning hiện đại.</p>
+             <ul>
+               <li>Tính toán cực rẻ (chỉ 1 phép so sánh), không bão hòa ở phía dương.</li>
+               <li>Nhược điểm: nếu input luôn âm, neuron "chết" — output và gradient luôn bằng 0, không học được nữa (<span class="kw neg">dying ReLU</span>).</li>
+             </ul>`
+    },
+    step: {
+      f: MathNN.step,
+      range: [-0.2, 1.2],
+      formula: 'f(x) = 1 nếu x ≥ 0, ngược lại 0',
+      desc: `<p><span class="kw">Step function</span> là hàm kích hoạt trong Perceptron nguyên bản (1958) — mô phỏng neuron sinh học "bắn hoặc không bắn".</p>
+             <ul>
+               <li>Đạo hàm bằng 0 ở mọi nơi (và không xác định tại x=0) → <strong>không thể dùng backpropagation</strong>.</li>
+               <li>Đây chính là lý do lịch sử AI phải chuyển sang Sigmoid/Tanh/ReLU để mạng nhiều lớp học được.</li>
+             </ul>`
+    },
+  };
+
+  function draw(){
+    const canvas = document.getElementById('act-canvas');
+    if(!canvas) return;
+    const fn = FNS[currentFn];
+    const {ctx, w, h} = setupCanvas(canvas);
+    ctx.clearRect(0,0,w,h);
+    const pad = {l:34, r:16, t:16, b:24};
+    const plotW = w-pad.l-pad.r, plotH = h-pad.t-pad.b;
+    const [ymin,ymax] = fn.range;
+    const xmin=-5, xmax=5;
+
+    function toPx(x,y){
+      const px = pad.l + (x-xmin)/(xmax-xmin)*plotW;
+      const py = pad.t + (1-(y-ymin)/(ymax-ymin))*plotH;
+      return [px,py];
+    }
+
+    // grid
+    ctx.strokeStyle = 'rgba(126,158,214,0.12)';
+    ctx.lineWidth = 1;
+    for(let i=0;i<=4;i++){
+      const y = pad.t + plotH*i/4;
+      ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+plotW,y); ctx.stroke();
+      const val = ymax - (ymax-ymin)*i/4;
+      ctx.fillStyle = 'rgba(146,160,188,0.7)';
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.fillText(val.toFixed(1), 2, y+3);
+    }
+    // axis x=0
+    const [ax0] = toPx(0,0);
+    ctx.strokeStyle = 'rgba(126,158,214,0.3)';
+    ctx.beginPath(); ctx.moveTo(ax0,pad.t); ctx.lineTo(ax0,pad.t+plotH); ctx.stroke();
+    if(ymin<0 && ymax>0){
+      const [,ay0] = toPx(0,0);
+      ctx.beginPath(); ctx.moveTo(pad.l,ay0); ctx.lineTo(pad.l+plotW,ay0); ctx.stroke();
+    }
+
+    // curve
+    ctx.beginPath();
+    const N = 240;
+    for(let i=0;i<=N;i++){
+      const x = xmin + (xmax-xmin)*i/N;
+      let y = fn.f(x);
+      const [px,py] = toPx(x, Math.max(ymin,Math.min(ymax,y)));
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.strokeStyle = '#4FD6C4';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // moving point
+    const xVal = parseFloat(document.getElementById('s-act-x').value);
+    const yVal = fn.f(xVal);
+    const [px,py] = toPx(xVal, Math.max(ymin,Math.min(ymax,yVal)));
+    ctx.beginPath();
+    ctx.arc(px,py,5,0,Math.PI*2);
+    ctx.fillStyle = '#F0A84E';
+    ctx.strokeStyle = '#0A1220';
+    ctx.lineWidth = 2;
+    ctx.fill(); ctx.stroke();
+    // dashed guide lines
+    ctx.setLineDash([3,3]);
+    ctx.strokeStyle = 'rgba(240,168,78,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px,pad.t+plotH); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(pad.l,py); ctx.stroke();
+    ctx.setLineDash([]);
+
+    document.getElementById('ro-fn-name').textContent = fn.formula;
+    document.getElementById('ro-fn-val').textContent = 'f('+xVal.toFixed(1)+') = '+yVal.toFixed(3);
+    document.getElementById('v-act-x').textContent = xVal.toFixed(1);
+  }
+
+  function selectFn(name){
+    currentFn = name;
+    document.querySelectorAll('#fn-chips .chip').forEach(c=>{
+      c.classList.toggle('active', c.getAttribute('data-fn')===name);
+    });
+    document.getElementById('fn-desc').innerHTML = FNS[name].desc;
+    draw();
+  }
+
+  function init(){
+    if(ready) return;
+    document.querySelectorAll('#fn-chips .chip').forEach(c=>{
+      c.addEventListener('click', ()=> selectFn(c.getAttribute('data-fn')));
+    });
+    document.getElementById('s-act-x').addEventListener('input', draw);
+    selectFn('sigmoid');
+    onResizeRedraw(draw);
+    ready = true;
+  }
+
+  window.__onTabShown = window.__onTabShown || function(){};
+  const prevShown = window.__onTabShown;
+  window.__onTabShown = function(id){
+    prevShown(id);
+    if(id==='activation'){ init(); draw(); }
+  };
+})();
+/* ============================================================
+   TAB 3 — Network Architecture (MLP)
+   ============================================================ */
+(function(){
+  let ready = false;
+  let animating = false;
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const inputVals = [0.8, -0.3, 0.6];
+  let hiddenN = 4;
+  let W1=[], b1=[], W2=[], b2=[]; // input->hidden, hidden->output
+
+  function randWeights(){
+    W1 = []; b1 = []; W2 = []; b2 = [];
+    for(let j=0;j<hiddenN;j++){
+      const row = [];
+      for(let i=0;i<3;i++) row.push((Math.random()*2-1)*1.6);
+      W1.push(row);
+      b1.push((Math.random()*2-1)*0.6);
+    }
+    for(let k=0;k<2;k++){
+      const row = [];
+      for(let j=0;j<hiddenN;j++) row.push((Math.random()*2-1)*1.6);
+      W2.push(row);
+    }
+    b2 = [(Math.random()*2-1)*0.6, (Math.random()*2-1)*0.6];
+  }
+
+  function paramCount(){
+    return (3*hiddenN + hiddenN) + (hiddenN*2 + 2);
+  }
+
+  function el(tag, attrs){
+    const e = document.createElementNS(SVGNS, tag);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function layerY(k, i, top, bottom){
+    return top + (bottom-top)*(i+1)/(k+1);
+  }
+
+  let nodeRefs = {input:[], hidden:[], output:[]};
+  let edgeRefs = {ih:[], ho:[]};
+
+  function buildDiagram(){
+    const wrap = document.getElementById('arch-svg-wrap');
+    if(!wrap) return;
+    wrap.innerHTML = '';
+    nodeRefs = {input:[], hidden:[], output:[]};
+    edgeRefs = {ih:[], ho:[]};
+
+    const top=30, bottom=270, vbH=300;
+    const xIn=70, xHid=245, xOut=410;
+    const svg = el('svg',{viewBox:'0 0 480 '+vbH, class:'nn-diagram'});
+
+    // edges input->hidden
+    for(let i=0;i<3;i++){
+      const y1 = layerY(3,i,top,bottom);
+      for(let j=0;j<hiddenN;j++){
+        const y2 = layerY(hiddenN,j,top,bottom);
+        const w = W1[j][i];
+        const mag = Math.min(Math.abs(w)/1.8,1);
+        const line = el('line',{x1:xIn+16,y1,x2:xHid-14,y2,
+          style:`stroke:${w>=0?'#4FD6C4':'#E8637E'};stroke-width:${(0.8+mag*2.6).toFixed(2)};opacity:${(0.18+mag*0.4).toFixed(2)}`});
+        svg.appendChild(line);
+        edgeRefs.ih.push(line);
+      }
+    }
+    // edges hidden->output
+    for(let j=0;j<hiddenN;j++){
+      const y1 = layerY(hiddenN,j,top,bottom);
+      for(let k=0;k<2;k++){
+        const y2 = layerY(2,k,top,bottom);
+        const w = W2[k][j];
+        const mag = Math.min(Math.abs(w)/1.8,1);
+        const line = el('line',{x1:xHid+14,y1,x2:xOut-15,y2,
+          style:`stroke:${w>=0?'#4FD6C4':'#E8637E'};stroke-width:${(0.8+mag*2.6).toFixed(2)};opacity:${(0.18+mag*0.4).toFixed(2)}`});
+        svg.appendChild(line);
+        edgeRefs.ho.push(line);
+      }
+    }
+    // input nodes
+    for(let i=0;i<3;i++){
+      const y = layerY(3,i,top,bottom);
+      const c = el('circle',{cx:xIn,cy:y,r:15,class:'arch-node'});
+      svg.appendChild(c);
+      const t = el('text',{x:xIn,y:y+4,'text-anchor':'middle',class:'node-txt small'});
+      t.textContent = 'x'+(i+1);
+      svg.appendChild(t);
+      nodeRefs.input.push(c);
+    }
+    // hidden nodes
+    for(let j=0;j<hiddenN;j++){
+      const y = layerY(hiddenN,j,top,bottom);
+      const r = hiddenN>6 ? 10 : 13;
+      const c = el('circle',{cx:xHid,cy:y,r,class:'arch-node'});
+      svg.appendChild(c);
+      if(hiddenN<=6){
+        const t = el('text',{x:xHid,y:y+3.5,'text-anchor':'middle',class:'node-txt small'});
+        t.textContent = 'h'+(j+1);
+        svg.appendChild(t);
+      }
+      nodeRefs.hidden.push(c);
+    }
+    // output nodes
+    const outLabels = ['A','B'];
+    for(let k=0;k<2;k++){
+      const y = layerY(2,k,top,bottom);
+      const c = el('circle',{cx:xOut,cy:y,r:17,class:'arch-node'});
+      svg.appendChild(c);
+      const t = el('text',{x:xOut,y:y+4,'text-anchor':'middle',class:'node-txt'});
+      t.textContent = outLabels[k];
+      svg.appendChild(t);
+      nodeRefs.output.push(c);
+    }
+
+    // layer captions
+    const capIn = el('text',{x:xIn,y:16,'text-anchor':'middle',class:'edge-txt'}); capIn.textContent='INPUT';
+    const capHid = el('text',{x:xHid,y:16,'text-anchor':'middle',class:'edge-txt'}); capHid.textContent='HIDDEN';
+    const capOut = el('text',{x:xOut,y:16,'text-anchor':'middle',class:'edge-txt'}); capOut.textContent='OUTPUT';
+    svg.appendChild(capIn); svg.appendChild(capHid); svg.appendChild(capOut);
+
+    wrap.appendChild(svg);
+    document.getElementById('ro-param-count').textContent = paramCount();
+  }
+
+  function resetNodeGlow(){
+    [...nodeRefs.input, ...nodeRefs.hidden, ...nodeRefs.output].forEach(n=>{
+      n.style.fill=''; n.style.stroke='';
+    });
+  }
+
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  async function runForwardPass(){
+    if(animating) return;
+    animating = true;
+    const btn = document.getElementById('btn-forward');
+    btn.disabled = true; btn.textContent = '⏳ Đang chạy...';
+    resetNodeGlow();
+
+    // stage 1: light up inputs
+    nodeRefs.input.forEach(n=>{ n.style.fill='rgba(79,214,196,0.35)'; n.style.stroke='#4FD6C4'; });
+    await sleep(450);
+
+    // compute hidden activations
+    const hiddenA = [];
+    for(let j=0;j<hiddenN;j++){
+      let z = b1[j];
+      for(let i=0;i<3;i++) z += inputVals[i]*W1[j][i];
+      hiddenA.push(MathNN.sigmoid(z));
+    }
+    edgeRefs.ih.forEach(e=>{ e.style.opacity='0.9'; });
+    await sleep(350);
+    nodeRefs.hidden.forEach((n,j)=>{
+      const t = hiddenA[j];
+      n.style.fill = `rgba(155,140,242,${(0.15+t*0.55).toFixed(2)})`;
+      n.style.stroke = '#9B8CF2';
+    });
+    await sleep(450);
+
+    // compute output
+    const outZ = [0,0];
+    for(let k=0;k<2;k++){
+      let z = b2[k];
+      for(let j=0;j<hiddenN;j++) z += hiddenA[j]*W2[k][j];
+      outZ[k]=z;
+    }
+    const probs = MathNN.softmax(outZ);
+    edgeRefs.ho.forEach(e=>{ e.style.opacity='0.9'; });
+    await sleep(350);
+    nodeRefs.output.forEach((n,k)=>{
+      const t = probs[k];
+      n.style.fill = `rgba(240,168,78,${(0.15+t*0.6).toFixed(2)})`;
+      n.style.stroke = '#F0A84E';
+    });
+
+    const predIdx = probs[0]>=probs[1] ? 0 : 1;
+    document.getElementById('ro-pred-class').textContent = (predIdx===0?'Lớp A':'Lớp B')+' ('+(probs[predIdx]*100).toFixed(0)+'%)';
+    updateProbBar('prob-A', probs[0], predIdx===0);
+    updateProbBar('prob-B', probs[1], predIdx===1);
+
+    btn.disabled = false; btn.textContent = '▶ Forward Pass';
+    animating = false;
+  }
+
+  function updateProbBar(id, p, isTop){
+    const row = document.getElementById(id);
+    if(!row) return;
+    row.classList.toggle('top', isTop);
+    row.querySelector('.prob-bar-fill').style.width = (p*100).toFixed(1)+'%';
+    row.querySelector('.pct').textContent = (p*100).toFixed(0)+'%';
+  }
+
+  function onHiddenChange(){
+    hiddenN = parseInt(document.getElementById('s-hidden-n').value,10);
+    document.getElementById('v-hidden-n').textContent = hiddenN;
+    randWeights();
+    buildDiagram();
+    updateProbBar('prob-A', 0, false);
+    updateProbBar('prob-B', 0, false);
+    document.getElementById('ro-pred-class').textContent = '—';
+  }
+
+  function init(){
+    if(ready) return;
+    document.getElementById('s-hidden-n').addEventListener('input', onHiddenChange);
+    document.getElementById('btn-randomize').addEventListener('click', ()=>{ randWeights(); buildDiagram(); });
+    document.getElementById('btn-forward').addEventListener('click', runForwardPass);
+    randWeights();
+    buildDiagram();
+    ready = true;
+  }
+
+  window.__onTabShown = window.__onTabShown || function(){};
+  const prevShown = window.__onTabShown;
+  window.__onTabShown = function(id){
+    prevShown(id);
+    if(id==='architecture'){ init(); }
+  };
+})();
+/* ============================================================
+   TAB 4 — Loss Function
+   ============================================================ */
+(function(){
+  let ready = false;
+  let actual = 1;
+
+  function mse(y, yhat){ return (y-yhat)*(y-yhat); }
+  function bce(y, yhat){
+    const p = Math.min(Math.max(yhat, 1e-7), 1-1e-7);
+    return -(y*Math.log(p) + (1-y)*Math.log(1-p));
+  }
+
+  function draw(){
+    const canvas = document.getElementById('loss-canvas');
+    if(!canvas) return;
+    const yhat = parseFloat(document.getElementById('s-yhat').value);
+
+    const N = 120;
+    const mseData = [], bceData = [];
+    for(let i=0;i<=N;i++){
+      const yh = 0.01 + 0.98*i/N;
+      mseData.push(mse(actual, yh));
+      bceData.push(Math.min(bce(actual, yh), 5)); // clip for readable scale
+    }
+
+    const chart = drawLineChart(canvas, [
+      {data: mseData, color:'#4FD6C4', lineWidth:2.5},
+      {data: bceData, color:'#F0A84E', lineWidth:2.5},
+    ], {min:0, max:5, yDecimals:1});
+
+    // marker for current yhat
+    const ctx = canvas.getContext('2d');
+    const idx = Math.round((yhat-0.01)/0.98*N);
+    const px = chart.pad.l + chart.plotW*idx/N;
+    ctx.setLineDash([3,3]);
+    ctx.strokeStyle = 'rgba(232,237,246,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, chart.pad.t); ctx.lineTo(px, chart.pad.t+chart.plotH); ctx.stroke();
+    ctx.setLineDash([]);
+
+    const curMse = mse(actual, yhat);
+    const curBce = bce(actual, yhat);
+    document.getElementById('v-yhat').textContent = yhat.toFixed(2);
+    document.getElementById('ro-mse').textContent = curMse.toFixed(3);
+    document.getElementById('ro-bce').textContent = (curBce>5?'>5.00':curBce.toFixed(3));
+    document.getElementById('bar-mse').style.width = Math.min(curMse/1*100,100)+'%';
+    document.getElementById('bar-bce').style.width = Math.min(curBce/5*100,100)+'%';
+  }
+
+  function setActual(v){
+    actual = v;
+    document.querySelectorAll('[data-actual]').forEach(c=>{
+      c.classList.toggle('active', parseInt(c.getAttribute('data-actual'),10)===v);
+    });
+    draw();
+  }
+
+  function init(){
+    if(ready) return;
+    document.getElementById('s-yhat').addEventListener('input', draw);
+    document.querySelectorAll('[data-actual]').forEach(c=>{
+      c.addEventListener('click', ()=> setActual(parseInt(c.getAttribute('data-actual'),10)));
+    });
+    draw();
+    onResizeRedraw(draw);
+    ready = true;
+  }
+
+  window.__onTabShown = window.__onTabShown || function(){};
+  const prevShown = window.__onTabShown;
+  window.__onTabShown = function(id){
+    prevShown(id);
+    if(id==='loss'){ init(); draw(); }
+  };
+})();
+/* ============================================================
+   TAB 5 — Gradient Descent & Backpropagation
+   ============================================================ */
+(function(){
+  let ready = false;
+  let w = -2.0;
+  let steps = 0;
+  let history = [];
+  let autoTimer = null;
+
+  const MIN_W = -6, MAX_W = 12;
+
+  function loss(wv){ return (wv-3)*(wv-3); }
+  function grad(wv){ return 2*(wv-3); }
+
+  function draw(){
+    const canvas = document.getElementById('gd-canvas');
+    if(!canvas) return;
+    const {ctx, w:cw, h:ch} = setupCanvas(canvas);
+    ctx.clearRect(0,0,cw,ch);
+    const pad = {l:38, r:16, t:16, b:24};
+    const plotW = cw-pad.l-pad.r, plotH = ch-pad.t-pad.b;
+    const xmin=MIN_W, xmax=MAX_W;
+    const ymax = 85, ymin=0;
+
+    function toPx(x,y){
+      const px = pad.l + (x-xmin)/(xmax-xmin)*plotW;
+      const yc = Math.max(ymin, Math.min(ymax, y));
+      const py = pad.t + (1-(yc-ymin)/(ymax-ymin))*plotH;
+      return [px,py];
+    }
+
+    // grid
+    ctx.strokeStyle = 'rgba(126,158,214,0.12)';
+    ctx.lineWidth = 1;
+    for(let i=0;i<=4;i++){
+      const y = pad.t + plotH*i/4;
+      ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(pad.l+plotW,y); ctx.stroke();
+      const val = ymax - (ymax-ymin)*i/4;
+      ctx.fillStyle = 'rgba(146,160,188,0.7)';
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.fillText(val.toFixed(0), 2, y+3);
+    }
+
+    // parabola
+    ctx.beginPath();
+    for(let i=0;i<=200;i++){
+      const x = xmin + (xmax-xmin)*i/200;
+      const [px,py] = toPx(x, loss(x));
+      if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    }
+    ctx.strokeStyle = '#4FD6C4';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // minimum marker
+    const [mx,my] = toPx(3,0);
+    ctx.setLineDash([2,3]);
+    ctx.strokeStyle = 'rgba(240,168,78,0.5)';
+    ctx.beginPath(); ctx.moveTo(mx,pad.t); ctx.lineTo(mx,pad.t+plotH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(146,160,188,0.8)';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.fillText('w*=3', mx-14, pad.t+plotH+18);
+
+    // trail
+    history.forEach((hw,i)=>{
+      const t = (i+1)/history.length;
+      const [px,py] = toPx(hw, loss(hw));
+      ctx.beginPath();
+      ctx.arc(px,py,3,0,Math.PI*2);
+      ctx.fillStyle = `rgba(240,168,78,${(0.15+t*0.35).toFixed(2)})`;
+      ctx.fill();
+    });
+
+    // ball
+    const [bx,by] = toPx(w, loss(w));
+    ctx.beginPath();
+    ctx.arc(bx,by,7,0,Math.PI*2);
+    ctx.fillStyle = '#F0A84E';
+    ctx.strokeStyle = '#0A1220';
+    ctx.lineWidth = 2;
+    ctx.fill(); ctx.stroke();
+
+    document.getElementById('ro-w').textContent = w.toFixed(2);
+    document.getElementById('ro-grad').textContent = grad(w).toFixed(2);
+    document.getElementById('ro-loss').textContent = Math.min(loss(w),9999).toFixed(2);
+    document.getElementById('ro-steps').textContent = steps;
+  }
+
+  function status(msg, isWarn){
+    const el = document.getElementById('gd-status');
+    if(!el) return;
+    el.textContent = msg || '';
+    el.style.color = isWarn ? 'var(--neg)' : 'var(--text-faint)';
+  }
+
+  function doStep(){
+    const lr = parseFloat(document.getElementById('s-lr').value);
+    history.push(w);
+    if(history.length>25) history.shift();
+    const g = grad(w);
+    w = w - lr*g;
+    steps++;
+    if(Math.abs(w-3) > 40){
+      status('⚠️ Learning rate quá lớn — quá trình đang phân kỳ (diverge), không hội tụ về w*=3.', true);
+      stopAuto();
+    } else if(Math.abs(g) < 0.02){
+      status('✓ Đã hội tụ về gần điểm tối ưu w* = 3.', false);
+      stopAuto();
+    } else {
+      status('');
+    }
+    w = MathNN.clamp(w, MIN_W*3, MAX_W*3);
+    draw();
+  }
+
+  function resetW(){
+    stopAuto();
+    const candidates = [-4.5,-3,-1.5,7.5,9,10];
+    w = candidates[Math.floor(Math.random()*candidates.length)];
+    steps = 0;
+    history = [];
+    status('');
+    draw();
+  }
+
+  function stopAuto(){
+    if(autoTimer){ clearInterval(autoTimer); autoTimer=null; }
+    const btn = document.getElementById('btn-auto');
+    if(btn) btn.textContent = '⏵ Tự động chạy';
+  }
+
+  function toggleAuto(){
+    const btn = document.getElementById('btn-auto');
+    if(autoTimer){
+      stopAuto();
+    } else {
+      btn.textContent = '⏸ Dừng';
+      autoTimer = setInterval(()=>{
+        doStep();
+        if(steps>=60) stopAuto();
+      }, 260);
+    }
+  }
+
+  function init(){
+    if(ready) return;
+    document.getElementById('btn-step').addEventListener('click', doStep);
+    document.getElementById('btn-reset-gd').addEventListener('click', resetW);
+    document.getElementById('btn-auto').addEventListener('click', toggleAuto);
+    document.getElementById('s-lr').addEventListener('input', ()=>{
+      document.getElementById('v-lr').textContent = parseFloat(document.getElementById('s-lr').value).toFixed(2);
+    });
+    draw();
+    onResizeRedraw(draw);
+    ready = true;
+  }
+
+  window.__onTabShown = window.__onTabShown || function(){};
+  const prevShown = window.__onTabShown;
+  window.__onTabShown = function(id){
+    prevShown(id);
+    if(id==='gradient'){ init(); draw(); }
+    else { stopAuto(); }
+  };
+})();
+/* ============================================================
+   TAB 6 — Training Visualization / Decision Boundary
+   ============================================================ */
+(function(){
+  let ready = false;
+  const nIn=2, nHid=8, nOut=1;
+  const LR = 0.8;
+  const MAX_EPOCHS = 350;
+  const DOMAIN = 3.3;
+
+  let points = [];
+  let W1,b1,W2,b2;
+  let epoch = 0;
+  let lossHistory = [];
+  let rafId = null;
+  let trainingActive = false;
+
+  function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+
+  function genData(n){
+    const pts = [];
+    for(let i=0;i<n/2;i++){
+      const ang = Math.random()*Math.PI*2;
+      const r = Math.random()*1.2;
+      pts.push({x1:r*Math.cos(ang), x2:r*Math.sin(ang), y:1});
+    }
+    for(let i=0;i<n/2;i++){
+      const ang = Math.random()*Math.PI*2;
+      const r = 1.8 + Math.random()*1.2;
+      pts.push({x1:r*Math.cos(ang), x2:r*Math.sin(ang), y:0});
+    }
+    return pts;
+  }
+
+  function initNet(){
+    W1 = Array.from({length:nHid},()=>[ (Math.random()*2-1)*0.8, (Math.random()*2-1)*0.8 ]);
+    b1 = new Array(nHid).fill(0);
+    W2 = Array.from({length:nHid},()=> (Math.random()*2-1)*0.8);
+    b2 = 0;
+    epoch = 0;
+    lossHistory = [];
+  }
+
+  function forward(x1,x2){
+    const a1 = new Array(nHid);
+    for(let j=0;j<nHid;j++){
+      const z = W1[j][0]*x1 + W1[j][1]*x2 + b1[j];
+      a1[j] = sigmoid(z);
+    }
+    let z2 = b2;
+    for(let j=0;j<nHid;j++) z2 += W2[j]*a1[j];
+    const out = sigmoid(z2);
+    return {a1, out};
+  }
+
+  function trainEpoch(){
+    const dW1 = Array.from({length:nHid},()=>[0,0]);
+    const db1 = new Array(nHid).fill(0);
+    const dW2 = new Array(nHid).fill(0);
+    let db2 = 0;
+    let lossSum = 0;
+    const N = points.length;
+
+    for(const p of points){
+      const {a1, out} = forward(p.x1, p.x2);
+      const yp = Math.min(Math.max(out,1e-7),1-1e-7);
+      lossSum += -(p.y*Math.log(yp) + (1-p.y)*Math.log(1-yp));
+
+      const dOut = (out - p.y);
+      for(let j=0;j<nHid;j++){
+        dW2[j] += dOut*a1[j];
+      }
+      db2 += dOut;
+      for(let j=0;j<nHid;j++){
+        const dHid = dOut*W2[j]*a1[j]*(1-a1[j]);
+        dW1[j][0] += dHid*p.x1;
+        dW1[j][1] += dHid*p.x2;
+        db1[j] += dHid;
+      }
+    }
+
+    for(let j=0;j<nHid;j++){
+      W1[j][0] -= LR*dW1[j][0]/N;
+      W1[j][1] -= LR*dW1[j][1]/N;
+      b1[j] -= LR*db1[j]/N;
+      W2[j] -= LR*dW2[j]/N;
+    }
+    b2 -= LR*db2/N;
+
+    return lossSum/N;
+  }
+
+  function computeAccuracy(){
+    let correct=0;
+    for(const p of points){
+      const {out} = forward(p.x1,p.x2);
+      const pred = out>=0.5 ? 1 : 0;
+      if(pred===p.y) correct++;
+    }
+    return correct/points.length;
+  }
+
+  function drawBoundary(){
+    const canvas = document.getElementById('train-canvas');
+    if(!canvas) return;
+    const {ctx, w, h} = setupCanvas(canvas);
+    ctx.clearRect(0,0,w,h);
+    const pad = {l:6, r:6, t:6, b:6};
+    const plotW = w-pad.l-pad.r, plotH = h-pad.t-pad.b;
+
+    function toPx(x1,x2){
+      const px = pad.l + (x1+DOMAIN)/(2*DOMAIN)*plotW;
+      const py = pad.t + (1-(x2+DOMAIN)/(2*DOMAIN))*plotH;
+      return [px,py];
+    }
+
+    const cells = 46;
+    const cw = plotW/cells, ch = plotH/cells;
+    for(let iy=0; iy<cells; iy++){
+      for(let ix=0; ix<cells; ix++){
+        const x1 = -DOMAIN + (2*DOMAIN)*(ix+0.5)/cells;
+        const x2 =  DOMAIN - (2*DOMAIN)*(iy+0.5)/cells;
+        const {out} = forward(x1,x2);
+        // out near 1 -> class A (amber), out near 0 -> class B (rose)
+        const t = out; // 0..1
+        const r = Math.round(232 + (240-232)*t);
+        const g = Math.round(99 + (168-99)*t);
+        const b = Math.round(126 + (78-126)*t);
+        const alpha = 0.10 + Math.abs(t-0.5)*0.22;
+        ctx.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+        ctx.fillRect(pad.l+ix*cw-0.5, pad.t+iy*ch-0.5, cw+1, ch+1);
+      }
+    }
+
+    // points
+    points.forEach(p=>{
+      const [px,py] = toPx(p.x1,p.x2);
+      ctx.beginPath();
+      ctx.arc(px,py,5,0,Math.PI*2);
+      ctx.fillStyle = p.y===1 ? '#F0A84E' : '#E8637E';
+      ctx.fill();
+      ctx.lineWidth=1.3;
+      ctx.strokeStyle = 'rgba(10,18,32,0.7)';
+      ctx.stroke();
+    });
+  }
+
+  function drawLossChart(){
+    const canvas = document.getElementById('train-loss-canvas');
+    if(!canvas || lossHistory.length<2) return;
+    drawLineChart(canvas, [{data:lossHistory, color:'#4FD6C4', lineWidth:2, markLast:true}], {min:0, yDecimals:2});
+  }
+
+  function updateReadouts(loss){
+    document.getElementById('ro-epoch').textContent = epoch+' / '+MAX_EPOCHS;
+    document.getElementById('ro-train-loss').textContent = loss!==undefined ? loss.toFixed(3) : '–';
+    const acc = computeAccuracy();
+    document.getElementById('ro-train-acc').textContent = (acc*100).toFixed(0)+'%';
+  }
+
+  function stopTraining(){
+    trainingActive = false;
+    if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+    const btn = document.getElementById('btn-train');
+    if(btn){ btn.disabled=false; btn.textContent = epoch>=MAX_EPOCHS ? '↺ Huấn luyện lại' : '▶ Huấn luyện'; }
+  }
+
+  function trainLoop(){
+    if(!trainingActive) return;
+    let loss = 0;
+    const epochsPerFrame = 3;
+    for(let i=0;i<epochsPerFrame && epoch<MAX_EPOCHS;i++){
+      loss = trainEpoch();
+      epoch++;
+      lossHistory.push(loss);
+    }
+    drawBoundary();
+    drawLossChart();
+    updateReadouts(loss);
+    if(epoch>=MAX_EPOCHS){
+      stopTraining();
+      return;
+    }
+    rafId = requestAnimationFrame(trainLoop);
+  }
+
+  function startTraining(){
+    if(trainingActive) return;
+    if(epoch>=MAX_EPOCHS){ initNet(); }
+    trainingActive = true;
+    const btn = document.getElementById('btn-train');
+    if(btn) btn.textContent = '⏸ Đang huấn luyện...';
+    rafId = requestAnimationFrame(trainLoop);
+  }
+
+  function newData(){
+    stopTraining();
+    points = genData(60);
+    initNet();
+    drawBoundary();
+    updateReadouts();
+    const lc = document.getElementById('train-loss-canvas');
+    if(lc){ const {ctx,w:cw,h:ch} = setupCanvas(lc); ctx.clearRect(0,0,cw,ch); }
+  }
+
+  function init(){
+    if(ready) return;
+    document.getElementById('btn-train').addEventListener('click', startTraining);
+    document.getElementById('btn-new-data').addEventListener('click', newData);
+    points = genData(60);
+    initNet();
+    drawBoundary();
+    updateReadouts();
+    onResizeRedraw(()=>{ drawBoundary(); drawLossChart(); });
+    ready = true;
+  }
+
+  window.__onTabShown = window.__onTabShown || function(){};
+  const prevShown = window.__onTabShown;
+  window.__onTabShown = function(id){
+    prevShown(id);
+    if(id==='training'){ init(); drawBoundary(); }
+    else { stopTraining(); }
+  };
+})();
+/* ============================================================
+   TAB 7 — MNIST-family Digit Recognition (capstone)
+   ============================================================ */
+(function(){
+  let ready = false;
+  let pixels = new Array(64).fill(0);
+  let isDrawing = false;
+
+  function lerpColor(c1, c2, t){
+    return [
+      Math.round(c1[0]+(c2[0]-c1[0])*t),
+      Math.round(c1[1]+(c2[1]-c1[1])*t),
+      Math.round(c1[2]+(c2[2]-c1[2])*t),
+    ];
+  }
+  const EMPTY_RGB = [13,22,38];
+  const INK_RGB = [79,214,196];
+  const HID_RGB = [155,140,242];
+
+  function buildPixelGrid(){
+    const grid = document.getElementById('pixel-grid');
+    if(!grid || grid.children.length) return;
+    for(let i=0;i<64;i++){
+      const cell = document.createElement('div');
+      cell.className = 'pixel-cell';
+      cell.dataset.index = i;
+      grid.appendChild(cell);
+    }
+  }
+  function buildHiddenGrid(){
+    const grid = document.getElementById('hidden-grid');
+    if(!grid || grid.children.length) return;
+    for(let i=0;i<32;i++){
+      const cell = document.createElement('div');
+      cell.className = 'pixel-cell';
+      cell.dataset.index = i;
+      grid.appendChild(cell);
+    }
+  }
+
+  function renderPixels(){
+    const grid = document.getElementById('pixel-grid');
+    if(!grid) return;
+    [...grid.children].forEach((cell,i)=>{
+      const t = Math.min(pixels[i]/16, 1);
+      const [r,g,b] = lerpColor(EMPTY_RGB, INK_RGB, t);
+      cell.style.background = `rgb(${r},${g},${b})`;
+    });
+  }
+
+  function renderHidden(a1){
+    const grid = document.getElementById('hidden-grid');
+    if(!grid) return;
+    [...grid.children].forEach((cell,i)=>{
+      const t = a1 ? a1[i] : 0;
+      const [r,g,b] = lerpColor(EMPTY_RGB, HID_RGB, t);
+      cell.style.background = `rgb(${r},${g},${b})`;
+    });
+  }
+
+  function paintAt(index, strength){
+    if(index<0 || index>63) return;
+    pixels[index] = Math.min(16, pixels[index] + strength);
+  }
+
+  function paintFromIndex(index){
+    const row = Math.floor(index/8), col = index%8;
+    paintAt(index, 16);
+    [[-1,0],[1,0],[0,-1],[0,1]].forEach(([dr,dc])=>{
+      const rr=row+dr, cc=col+dc;
+      if(rr>=0&&rr<8&&cc>=0&&cc<8) paintAt(rr*8+cc, 7);
+    });
+    [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dr,dc])=>{
+      const rr=row+dr, cc=col+dc;
+      if(rr>=0&&rr<8&&cc>=0&&cc<8) paintAt(rr*8+cc, 3);
+    });
+    renderPixels();
+    predict();
+  }
+
+  function cellIndexFromPoint(clientX, clientY){
+    const el = document.elementFromPoint(clientX, clientY);
+    if(el && el.classList && el.classList.contains('pixel-cell') && el.parentElement.id==='pixel-grid'){
+      return parseInt(el.dataset.index,10);
+    }
+    return -1;
+  }
+
+  function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+
+  function predict(){
+    const W1 = MODEL_WEIGHTS.W1, b1 = MODEL_WEIGHTS.b1, W2 = MODEL_WEIGHTS.W2, b2 = MODEL_WEIGHTS.b2;
+    const x = pixels.map(v=>v/16);
+    const nHid = b1.length, nOut = b2.length;
+    const a1 = new Array(nHid);
+    for(let j=0;j<nHid;j++){
+      let z = b1[j];
+      for(let i=0;i<64;i++) z += x[i]*W1[i][j];
+      a1[j] = sigmoid(z);
+    }
+    const z2 = new Array(nOut);
+    for(let k=0;k<nOut;k++){
+      let z = b2[k];
+      for(let j=0;j<nHid;j++) z += a1[j]*W2[j][k];
+      z2[k]=z;
+    }
+    const probs = MathNN.softmax(z2);
+    renderHidden(a1);
+    renderPrediction(probs);
+  }
+
+  function renderPrediction(probs){
+    let top=0;
+    for(let i=1;i<probs.length;i++) if(probs[i]>probs[top]) top=i;
+    const hasSignal = pixels.some(v=>v>0);
+
+    document.getElementById('big-pred').textContent = hasSignal ? String(top) : '–';
+    document.getElementById('pred-confidence').textContent = hasSignal ? (probs[top]*100).toFixed(1)+'%' : '–';
+
+    const list = document.getElementById('prob-list');
+    list.innerHTML = '';
+    for(let d=0; d<probs.length; d++){
+      const row = document.createElement('div');
+      row.className = 'prob-row' + (hasSignal && d===top ? ' top' : '');
+      row.innerHTML = `<span class="digit">${d}</span><div class="prob-bar-track"><div class="prob-bar-fill" style="width:${(hasSignal?probs[d]*100:0).toFixed(1)}%"></div></div><span class="pct">${(hasSignal?probs[d]*100:0).toFixed(0)}%</span>`;
+      list.appendChild(row);
+    }
+  }
+
+  function clearPixels(){
+    pixels = new Array(64).fill(0);
+    renderPixels();
+    document.getElementById('sample-truth').textContent = '';
+    predict();
+  }
+
+  function loadSample(){
+    const s = MODEL_SAMPLES[Math.floor(Math.random()*MODEL_SAMPLES.length)];
+    pixels = s.pixels.slice();
+    renderPixels();
+    document.getElementById('sample-truth').textContent = 'Mẫu test thật · nhãn đúng = ' + s.label;
+    predict();
+  }
+
+  function drawHistoryChart(){
+    const canvas = document.getElementById('train-history-canvas');
+    if(!canvas || !MODEL_WEIGHTS.lossHistory) return;
+    drawLineChart(canvas, [{data:MODEL_WEIGHTS.lossHistory, color:'#4FD6C4', lineWidth:2, fill:true, fillColor:'rgba(79,214,196,0.08)'}], {min:0, yDecimals:2});
+  }
+
+  function wireDrawing(){
+    const grid = document.getElementById('pixel-grid');
+    grid.addEventListener('pointerdown', (e)=>{
+      isDrawing = true;
+      const idx = cellIndexFromPoint(e.clientX, e.clientY);
+      if(idx>=0) paintFromIndex(idx);
+      e.preventDefault();
+    });
+    grid.addEventListener('pointermove', (e)=>{
+      if(!isDrawing) return;
+      const idx = cellIndexFromPoint(e.clientX, e.clientY);
+      if(idx>=0) paintFromIndex(idx);
+      e.preventDefault();
+    });
+    window.addEventListener('pointerup', ()=>{ isDrawing=false; });
+    window.addEventListener('pointercancel', ()=>{ isDrawing=false; });
+  }
+
+  function init(){
+    if(ready) return;
+    buildPixelGrid();
+    buildHiddenGrid();
+    renderPixels();
+    wireDrawing();
+    document.getElementById('btn-clear-px').addEventListener('click', clearPixels);
+    document.getElementById('btn-sample-px').addEventListener('click', loadSample);
+    document.getElementById('ro-model-acc').textContent = (MODEL_WEIGHTS.meta.test_acc*100).toFixed(1)+'%';
+    document.getElementById('ro-model-n').textContent = MODEL_WEIGHTS.meta.n_train;
+    predict();
+    drawHistoryChart();
+    onResizeRedraw(drawHistoryChart);
+    ready = true;
+  }
+
+  window.__onTabShown = window.__onTabShown || function(){};
+  const prevShown = window.__onTabShown;
+  window.__onTabShown = function(id){
+    prevShown(id);
+    if(id==='mnist'){ init(); drawHistoryChart(); }
+  };
+})();
+
+</script>
+</body>
+</html>
